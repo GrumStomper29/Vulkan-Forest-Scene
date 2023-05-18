@@ -1,33 +1,18 @@
-#define GLFW_INCLUDE_NONE
-#include "glfw/glfw3.h"
-
-#include <cstdlib>
-#include <iostream>
+#include "graphics.hpp"
+#include "window.hpp"
 
 int main()
 {
-	if (!glfwInit())
+	Graphics::init();
+
+	Graphics::Window window{ 800, 450, "Vulkan-Forest-Scene" };
+
+	while (!window.shouldClose())
 	{
-		std::cerr << "error: failed to initialize GLFW.\n";
-		std::abort();
+		window.pollEvents();
 	}
 
-	GLFWwindow* window{ glfwCreateWindow(640, 480, "Vulkan Forest Scene", nullptr, nullptr) };
-
-	if (!window)
-	{
-		std::cerr << "error: failed to create window.\n";
-		std::abort();
-	}
-
-	while (!glfwWindowShouldClose(window))
-	{
-		glfwPollEvents();
-	}
-
-	glfwDestroyWindow(window);
-
-	glfwTerminate();
+	Graphics::terminate();
 
 	return 0;
 }
