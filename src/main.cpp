@@ -5,11 +5,14 @@ int main()
 {
 	Graphics::init();
 
-	Graphics::Window window{ 800, 450, "Vulkan-Forest-Scene" };
-
-	while (!window.shouldClose())
+	// Ensure the window is destroyed before Graphics::terminate() is called
 	{
-		window.pollEvents();
+		Graphics::Window window{ 800, 450, "Vulkan-Forest-Scene" };
+
+		while (!window.shouldClose())
+		{
+			window.pollEvents();
+		}
 	}
 
 	Graphics::terminate();
