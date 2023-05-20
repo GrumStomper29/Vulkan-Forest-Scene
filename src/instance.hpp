@@ -18,6 +18,11 @@ namespace Graphics
 			vkDestroyInstance(m_instance, nullptr);
 		}
 
+		VkInstance getVkInstanceHandle() const
+		{
+			return m_instance;
+		}
+
 	private:
 		VkInstance m_instance{};
 	};

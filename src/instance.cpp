@@ -17,7 +17,14 @@ namespace Graphics
 		VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 		appInfo.apiVersion = VK_API_VERSION_1_3;
 
-		std::vector<const char*> extensions;
+		std::vector<const char*> layers{};
+		
+		if (true)
+		{
+			layers.push_back("VK_LAYER_KHRONOS_validation");
+		}
+
+		std::vector<const char*> extensions{};
 		
 		std::uint32_t extensionCount{};
 		const char** glfwExtensionsBegin{ glfwGetRequiredInstanceExtensions(&extensionCount) };
@@ -25,6 +32,8 @@ namespace Graphics
 
 		VkInstanceCreateInfo instanceInfo{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 		instanceInfo.pApplicationInfo = &appInfo;
+		instanceInfo.enabledLayerCount = layers.size();
+		instanceInfo.ppEnabledLayerNames = layers.data();
 		instanceInfo.enabledExtensionCount = extensionCount;
 		instanceInfo.ppEnabledExtensionNames = extensions.data();
 

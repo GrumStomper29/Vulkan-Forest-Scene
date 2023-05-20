@@ -2,6 +2,7 @@
 
 #include "window.hpp"
 #include "instance.hpp"
+#include "device.hpp"
 
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
@@ -34,6 +35,7 @@ namespace Graphics
 	{
 		Window window{ 1920 / 2, 1080 / 2, "Vulkan-Forest-Scene" };
 		Instance instance{};
+		Device device{ instance };
 
 		while (!window.shouldClose())
 		{
@@ -44,7 +46,6 @@ namespace Graphics
 
 	void cleanup()
 	{
-		std::cout << "message: commencing engine cleanup.\n";
 		glfwTerminate();
 	}
 
