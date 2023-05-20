@@ -10,7 +10,14 @@ namespace Graphics
 	{
 	public:
 		Window(int width, int height, const char* title);
-		~Window();
+		
+		Window(Window&) = delete;
+		Window& operator=(Window&) = delete;
+
+		~Window()
+		{
+			glfwDestroyWindow(m_windowHandle);
+		}
 
 		bool shouldClose()
 		{
@@ -20,6 +27,11 @@ namespace Graphics
 		void pollEvents()
 		{
 			glfwPollEvents();
+		}
+
+		void swapBuffers()
+		{
+			glfwSwapBuffers(m_windowHandle);
 		}
 
 	private:

@@ -5,6 +5,8 @@ namespace Graphics
 
 	void init();
 
-	void terminate();
+	void run();
+
+	void cleanup();
 
 }

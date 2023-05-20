@@ -1,21 +1,15 @@
 #include "graphics.hpp"
-#include "window.hpp"
+
+#include <iostream>
 
 int main()
 {
 	Graphics::init();
 
-	// Ensure the window is destroyed before Graphics::terminate() is called
-	{
-		Graphics::Window window{ 800, 450, "Vulkan-Forest-Scene" };
+	Graphics::run();
 
-		while (!window.shouldClose())
-		{
-			window.pollEvents();
-		}
-	}
+	Graphics::cleanup();
 
-	Graphics::terminate();
-
+	std::cin.get();
 	return 0;
 }
