@@ -9,7 +9,8 @@ namespace Graphics
 {
 
 	Window::Window(int width, int height, const char* title)
-		: m_windowHandle{ glfwCreateWindow(width, height, title, nullptr, nullptr)}
+		: m_extent{ width, height }
+		, m_windowHandle{ glfwCreateWindow(width, height, title, nullptr, nullptr)}
 	{
 		if (!m_windowHandle)
 		{

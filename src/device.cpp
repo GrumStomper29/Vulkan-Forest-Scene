@@ -29,7 +29,7 @@ namespace Graphics
 
 		for (int i{ 0 }; i < queueFamilyProperties.size(); ++i)
 		{
-			if (queueFamilyProperties[i].queueFlags == VK_QUEUE_GRAPHICS_BIT)
+			if (queueFamilyProperties[i].queueFlags && VK_QUEUE_GRAPHICS_BIT)
 			{
 				m_graphicsQueueFamily = i;
 				break;
@@ -43,9 +43,14 @@ namespace Graphics
 		queueInfo.queueCount = 1;
 		queueInfo.pQueuePriorities = &queuePriority;
 
+		std::vector<const char*> extensions{};
+		extensions.push_back("VK_KHR_swapchain");
+
 		VkDeviceCreateInfo deviceInfo{ .sType{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO } };
 		deviceInfo.queueCreateInfoCount = 1;
 		deviceInfo.pQueueCreateInfos = &queueInfo;
+		deviceInfo.enabledExtensionCount = extensions.size();
+		deviceInfo.ppEnabledExtensionNames = extensions.data();
 
 		if (vkCreateDevice(m_physicalDevice, &deviceInfo, nullptr, &m_device) != VK_SUCCESS)
 		{

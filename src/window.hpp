@@ -1,5 +1,7 @@
 #pragma once
 
+#include "volk/volk.h"
+
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
 
@@ -34,8 +36,20 @@ namespace Graphics
 			glfwSwapBuffers(m_windowHandle);
 		}
 
+		GLFWwindow* getGLFWwindowHandle() const
+		{
+			return m_windowHandle;
+		}
+
+		VkExtent2D getExtent() const
+		{
+			return m_extent;
+		}
+
 	private:
 		GLFWwindow* m_windowHandle{};
+
+		const VkExtent2D m_extent{};
 	};
 
 }

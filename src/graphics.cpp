@@ -3,6 +3,7 @@
 #include "window.hpp"
 #include "instance.hpp"
 #include "device.hpp"
+#include "swapchain.hpp"
 
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
@@ -23,6 +24,7 @@ namespace Graphics
 			std::cerr << "error: failed to initialize GLFW.\n";
 			std::abort();
 		}
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 		if (volkInitialize() != VK_SUCCESS)
 		{
@@ -36,6 +38,7 @@ namespace Graphics
 		Window window{ 1920 / 2, 1080 / 2, "Vulkan-Forest-Scene" };
 		Instance instance{};
 		Device device{ instance };
+		Swapchain swapchain{ instance, window };
 
 		while (!window.shouldClose())
 		{
