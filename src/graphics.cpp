@@ -38,7 +38,7 @@ namespace Graphics
 		Window window{ 1920 / 2, 1080 / 2, "Vulkan-Forest-Scene" };
 		Instance instance{};
 		Device device{ instance };
-		Swapchain swapchain{ instance, window };
+		Swapchain swapchain{ window, instance, device, 4 };
 
 		while (!window.shouldClose())
 		{

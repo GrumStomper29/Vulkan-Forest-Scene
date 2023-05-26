@@ -19,6 +19,21 @@ namespace Graphics
 
 		~Device();
 
+		VkPhysicalDevice vkPhysicalDevice() const noexcept
+		{
+			return m_physicalDevice;
+		}
+
+		VkDevice vkDevice() const noexcept
+		{
+			return m_device;
+		}
+
+		VkQueue graphicsQueue() const noexcept
+		{
+			return m_graphicsQueue;
+		}
+
 	private:
 		VkPhysicalDevice m_physicalDevice{};
 
@@ -26,6 +41,8 @@ namespace Graphics
 
 		std::uint32_t m_graphicsQueueFamily{};
 		VkQueue m_graphicsQueue{};
+
+		const Instance& m_instance{};
 	};
 
 }

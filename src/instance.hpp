@@ -18,7 +18,7 @@ namespace Graphics
 			vkDestroyInstance(m_instance, nullptr);
 		}
 
-		VkInstance getVkInstanceHandle() const
+		VkInstance vkInstance() const noexcept
 		{
 			return m_instance;
 		}

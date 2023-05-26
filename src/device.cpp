@@ -12,12 +12,13 @@ namespace Graphics
 {
 
 	Device::Device(const Instance& instance)
+		: m_instance{ instance }
 	{
 		std::uint32_t gpuCount{};
-		vkEnumeratePhysicalDevices(instance.getVkInstanceHandle(), &gpuCount, nullptr);
+		vkEnumeratePhysicalDevices(m_instance.vkInstance(), &gpuCount, nullptr);
 
 		std::vector<VkPhysicalDevice> physicalDevices(gpuCount);
-		vkEnumeratePhysicalDevices(instance.getVkInstanceHandle(), &gpuCount, physicalDevices.data());
+		vkEnumeratePhysicalDevices(m_instance.vkInstance(), &gpuCount, physicalDevices.data());
 
 		m_physicalDevice = physicalDevices[0];
 

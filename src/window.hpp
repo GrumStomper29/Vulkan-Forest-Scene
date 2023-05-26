@@ -5,13 +5,15 @@
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
 
+#include <cstdint>
+
 namespace Graphics
 {
 
 	class Window final
 	{
 	public:
-		Window(int width, int height, const char* title);
+		Window(std::uint32_t width, std::uint32_t height, const char* title);
 		
 		Window(Window&) = delete;
 		Window& operator=(Window&) = delete;
@@ -36,12 +38,12 @@ namespace Graphics
 			glfwSwapBuffers(m_windowHandle);
 		}
 
-		GLFWwindow* getGLFWwindowHandle() const
+		GLFWwindow* glfwWindow() const noexcept
 		{
 			return m_windowHandle;
 		}
 
-		VkExtent2D getExtent() const
+		VkExtent2D vkExtent() const noexcept
 		{
 			return m_extent;
 		}

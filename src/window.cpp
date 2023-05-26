@@ -3,12 +3,13 @@
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
 
+#include <cstdint>
 #include <stdexcept>
 
 namespace Graphics
 {
 
-	Window::Window(int width, int height, const char* title)
+	Window::Window(std::uint32_t width, std::uint32_t height, const char* title)
 		: m_extent{ width, height }
 		, m_windowHandle{ glfwCreateWindow(width, height, title, nullptr, nullptr)}
 	{
