@@ -50,11 +50,37 @@ namespace Graphics
 
 		m_images.resize(swapchainImageCount);
 		vkGetSwapchainImagesKHR(m_device.vkDevice(), m_swapchain, &swapchainImageCount, m_images.data());
+
+		VkImageViewCreateInfo imageViewInfo{ .sType{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO } };
+		imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		imageViewInfo.format = VK_FORMAT_B8G8R8A8_SRGB;
+		// We will use default component mapping for now. Maybe we can screw with this later.
+		imageViewInfo.subresourceRange =
+		{
+			.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
+			.baseMipLevel{ 0 },
+			.levelCount{ 1 },
+			.baseArrayLayer{ 0 },
+			.layerCount{ 1 }
+		};
+
+		m_imageViews.resize(m_images.size());
+
+		for (int i{ 0 }; i < m_images.size(); ++i)
+		{
+			imageViewInfo.image = m_images[i];
+			vkCreateImageView(m_device.vkDevice(), &imageViewInfo, nullptr, &m_imageViews[i]);
+		}
 	}
 
 	Swapchain::~Swapchain()
 	{
+		for (auto view : m_imageViews)
+		{
+			vkDestroyImageView(m_device.vkDevice(), view, nullptr);
+		}
 		vkDestroySwapchainKHR(m_device.vkDevice(), m_swapchain, nullptr);
+
 		vkDestroySurfaceKHR(m_instance.vkInstance(), m_surface, nullptr);
 	}
 

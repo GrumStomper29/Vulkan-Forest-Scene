@@ -31,6 +31,16 @@ namespace Graphics
 			return m_swapchain;
 		}
 
+		const std::vector<VkImage>& vkImages() const noexcept
+		{
+			return m_images;
+		}
+
+		const std::vector<VkImageView>& vkImageViews() const noexcept
+		{
+			return m_imageViews;
+		}
+
 	private:
 		VkSurfaceKHR m_surface{};
 		VkSwapchainKHR m_swapchain{};
@@ -39,6 +49,7 @@ namespace Graphics
 		const Device& m_device;
 
 		std::vector<VkImage> m_images{};
+		std::vector<VkImageView> m_imageViews{};
 	};
 
 }
