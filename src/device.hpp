@@ -29,6 +29,11 @@ namespace Graphics
 			return m_device;
 		}
 
+		std::uint32_t graphicsQueueFamily() const noexcept
+		{
+			return m_graphicsQueueFamily;
+		}
+
 		VkQueue graphicsQueue() const noexcept
 		{
 			return m_graphicsQueue;

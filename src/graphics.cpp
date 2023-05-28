@@ -4,6 +4,7 @@
 #include "instance.hpp"
 #include "device.hpp"
 #include "swapchain.hpp"
+#include "cmd_buffer.hpp"
 
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
@@ -39,6 +40,7 @@ namespace Graphics
 		Instance instance{};
 		Device device{ instance };
 		Swapchain swapchain{ window, instance, device, 4 };
+		CmdBuffer graphicsBuffer{ device, device.graphicsQueueFamily() };
 
 		while (!window.shouldClose())
 		{

@@ -37,6 +37,9 @@ namespace Graphics
 			}
 		}
 
+		VkPhysicalDeviceVulkan13Features vulkan13Features{ .sType{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES } };
+		vulkan13Features.dynamicRendering = VK_TRUE;
+
 		constexpr float queuePriority{ 1.0f };
 
 		VkDeviceQueueCreateInfo queueInfo{ .sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO } };
@@ -48,6 +51,7 @@ namespace Graphics
 		extensions.push_back("VK_KHR_swapchain");
 
 		VkDeviceCreateInfo deviceInfo{ .sType{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO } };
+		deviceInfo.pNext = &vulkan13Features;
 		deviceInfo.queueCreateInfoCount = 1;
 		deviceInfo.pQueueCreateInfos = &queueInfo;
 		deviceInfo.enabledExtensionCount = extensions.size();
