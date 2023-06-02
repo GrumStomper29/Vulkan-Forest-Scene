@@ -4,9 +4,15 @@
 
 #include "volk/volk.h"
 
+#define VMA_IMPLEMENTATION
+#define VMA_STATIC_FUNCTIONS 1
+#include "vma/vk_mem_alloc.h"
+
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
+
+#include <iostream>
 
 namespace Graphics
 {
@@ -39,6 +45,7 @@ namespace Graphics
 
 		VkPhysicalDeviceVulkan13Features vulkan13Features{ .sType{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES } };
 		vulkan13Features.dynamicRendering = VK_TRUE;
+		vulkan13Features.synchronization2 = VK_TRUE;
 
 		constexpr float queuePriority{ 1.0f };
 
@@ -63,10 +70,27 @@ namespace Graphics
 		}
 
 		volkLoadDevice(m_device);
+
+		vkGetDeviceQueue(m_device, m_graphicsQueueFamily, 0, &m_graphicsQueue);
+
+		VmaVulkanFunctions vkFcns{ .vkGetInstanceProcAddr{ vkGetInstanceProcAddr }, .vkGetDeviceProcAddr{ vkGetDeviceProcAddr } };
+
+		VmaAllocatorCreateInfo  allocInfo{};
+		allocInfo.physicalDevice = m_physicalDevice;
+		allocInfo.device = m_device;
+		allocInfo.pVulkanFunctions = &vkFcns;
+		allocInfo.instance = m_instance.vkInstance();
+		allocInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+		
+		if (vmaCreateAllocator(&allocInfo, &m_allocator) != VK_SUCCESS)
+		{
+			throw std::runtime_error{ "error: Vulkan Memory Allocator failed to create an allocator.\n" };
+		}
 	}
 
 	Device::~Device()
 	{
+		vmaDestroyAllocator(m_allocator);
 		vkDestroyDevice(m_device, nullptr);
 	}
 

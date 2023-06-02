@@ -8,7 +8,7 @@ namespace Graphics
 	class Instance
 	{
 	public:
-		Instance();
+		Instance(bool enabledValidation);
 		
 		Instance(Instance&) = delete;
 		Instance& operator=(Instance&) = delete;

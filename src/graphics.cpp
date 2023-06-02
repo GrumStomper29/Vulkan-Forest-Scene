@@ -6,6 +6,8 @@
 #include "swapchain.hpp"
 #include "cmd_buffer.hpp"
 
+#include "image_transition.hpp"
+
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
 
@@ -13,6 +15,9 @@
 
 #include <cstdlib>
 #include <iostream>
+
+// temp
+#include <cstdint>
 
 namespace Graphics
 {
@@ -36,17 +41,81 @@ namespace Graphics
 
 	void run()
 	{
+		// Core structures
 		Window window{ 1920 / 2, 1080 / 2, "Vulkan-Forest-Scene" };
-		Instance instance{};
+		Instance instance{ true };
 		Device device{ instance };
 		Swapchain swapchain{ window, instance, device, 4 };
 		CmdBuffer graphicsBuffer{ device, device.graphicsQueueFamily() };
 
+		// Synchronization structs
+		VkSemaphore presentSemaphore{};
+		VkSemaphore renderSemaphore{};
+		VkFence renderFence{};
+
+		VkSemaphoreCreateInfo semaphoreInfo{ .sType{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO } };
+		vkCreateSemaphore(device.vkDevice(), &semaphoreInfo, nullptr, &presentSemaphore);
+		vkCreateSemaphore(device.vkDevice(), &semaphoreInfo, nullptr, &renderSemaphore);
+
+		VkFenceCreateInfo fenceInfo{ .sType{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO } };
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		vkCreateFence(device.vkDevice(), &fenceInfo, nullptr, &renderFence);
+
 		while (!window.shouldClose())
 		{
 			window.pollEvents();
+
+			vkWaitForFences(device.vkDevice(), 1, &renderFence, VK_TRUE, 60000000000); // Wait up to one minute
+			vkResetFences(device.vkDevice(), 1, &renderFence);
+
+			std::uint32_t swapchainImageIndex{ swapchain.acquireNextImage(presentSemaphore) };
+
+			graphicsBuffer.reset();
+			graphicsBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+			prepareImageForColorAttachmentOutput(swapchain.vkImages()[swapchainImageIndex], graphicsBuffer);
+
+			VkRenderingAttachmentInfo colorAttachment{ .sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO } };
+			colorAttachment.imageView = swapchain.vkImageViews()[swapchainImageIndex];
+			colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			colorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			colorAttachment.clearValue = { { 0.0f, 0.0f, 1.0f, 1.0f } };
+
+			VkRenderingInfo renderInfo{ .sType{ VK_STRUCTURE_TYPE_RENDERING_INFO } };
+			renderInfo.renderArea = VkRect2D{ {}, window.vkExtent() };
+			renderInfo.layerCount = 1;
+			renderInfo.viewMask = 0;
+			renderInfo.colorAttachmentCount = 1;
+			renderInfo.pColorAttachments = &colorAttachment;
+
+			vkCmdBeginRendering(graphicsBuffer.vkCommandBuffer(), &renderInfo);
+
+			// Absolutely no rendering done.
+
+			vkCmdEndRendering(graphicsBuffer.vkCommandBuffer());
+
+			prepareImageForPresentation(swapchain.vkImages()[swapchainImageIndex], graphicsBuffer);
+
+			graphicsBuffer.end();
+
+			graphicsBuffer.submit({ presentSemaphore },
+				{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
+				{ renderSemaphore },
+				device.graphicsQueue(),
+				renderFence);
+
+			swapchain.queuePresent({ renderSemaphore }, swapchainImageIndex);
+
 			window.swapBuffers();
 		}
+
+		vkDeviceWaitIdle(device.vkDevice());
+
+		vkDestroyFence(device.vkDevice(), renderFence, nullptr);
+		vkDestroySemaphore(device.vkDevice(), presentSemaphore, nullptr);
+		vkDestroySemaphore(device.vkDevice(), renderSemaphore, nullptr);
 	}
 
 	void cleanup()

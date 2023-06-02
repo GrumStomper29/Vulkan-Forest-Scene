@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace Graphics
 {
@@ -21,11 +22,30 @@ namespace Graphics
 		CmdBuffer(CmdBuffer&) = delete;
 		CmdBuffer& operator=(CmdBuffer&) = delete;
 
+		void reset(VkCommandBufferResetFlags flags = 0);
+
+		void begin(VkCommandBufferUsageFlags flags = 0);
+
+		void end()
+		{
+			vkEndCommandBuffer(m_buffer);
+		}
+
+		VkResult submit(const std::vector<VkSemaphore>& waitSemaphores,
+			const std::vector<VkPipelineStageFlags>& waitStages,
+			const std::vector<VkSemaphore>& signalSemaphores,
+			VkQueue queue,
+			VkFence fence);
+
 		VkCommandPool vkCommandPool() const noexcept
 		{
 			return *m_pool;
 		}
 
+		VkCommandBuffer& vkCommandBuffer() noexcept
+		{
+			return m_buffer;
+		}
 		VkCommandBuffer vkCommandBuffer() const noexcept
 		{
 			return m_buffer;

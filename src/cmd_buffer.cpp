@@ -36,6 +36,36 @@ namespace Graphics
 		allocateCmdBuffer(*m_pool);
 	}
 
+	void CmdBuffer::reset(VkCommandBufferResetFlags flags)
+	{
+		vkResetCommandBuffer(m_buffer, flags);
+	}
+
+	void CmdBuffer::begin(VkCommandBufferUsageFlags flags)
+	{
+		VkCommandBufferBeginInfo beginInfo{ .sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO } };
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		vkBeginCommandBuffer(m_buffer, &beginInfo);
+	}
+
+	VkResult CmdBuffer::submit(const std::vector<VkSemaphore>& waitSemaphores,
+		const std::vector<VkPipelineStageFlags>& waitStages,
+		const std::vector<VkSemaphore>& signalSemaphores,
+		VkQueue queue,
+		VkFence fence)
+	{
+		VkSubmitInfo submitInfo{ .sType{ VK_STRUCTURE_TYPE_SUBMIT_INFO } };
+		submitInfo.waitSemaphoreCount = waitSemaphores.size();
+		submitInfo.pWaitSemaphores = waitSemaphores.data();
+		submitInfo.pWaitDstStageMask = waitStages.data();
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_buffer;
+		submitInfo.signalSemaphoreCount = signalSemaphores.size();
+		submitInfo.pSignalSemaphores = signalSemaphores.data();
+
+		return vkQueueSubmit(queue, 1, &submitInfo, fence);
+	}
+
 	void CmdBuffer::allocateCmdBuffer(VkCommandPool cmdPool)
 	{
 		VkCommandBufferAllocateInfo allocInfo{ .sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO } };

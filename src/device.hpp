@@ -3,6 +3,7 @@
 #include "instance.hpp"
 
 #include "volk/volk.h"
+#include "vma/vk_mem_alloc.h"
 
 #include <cstdint>
 
@@ -29,6 +30,11 @@ namespace Graphics
 			return m_device;
 		}
 
+		VmaAllocator vmaAllocator() const noexcept
+		{
+			return m_allocator;
+		}
+
 		std::uint32_t graphicsQueueFamily() const noexcept
 		{
 			return m_graphicsQueueFamily;
@@ -44,10 +50,12 @@ namespace Graphics
 
 		VkDevice m_device{};
 
+		VmaAllocator m_allocator{};
+
 		std::uint32_t m_graphicsQueueFamily{};
 		VkQueue m_graphicsQueue{};
 
-		const Instance& m_instance{};
+		const Instance& m_instance;
 	};
 
 }

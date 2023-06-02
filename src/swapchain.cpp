@@ -8,9 +8,11 @@
 #include "window.hpp"
 #include "instance.hpp"
 #include "device.hpp"
+#include "cmd_buffer.hpp"
 
 #include <cstdint>
 #include <stdexcept>
+#include <vector>
 
 namespace Graphics
 {

@@ -12,14 +12,14 @@
 namespace Graphics
 {
 
-	Instance::Instance()
+	Instance::Instance(bool enabledValidation)
 	{
 		VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 		appInfo.apiVersion = VK_API_VERSION_1_3;
 
 		std::vector<const char*> layers{};
 		
-		if (true)
+		if (enabledValidation)
 		{
 			layers.push_back("VK_LAYER_KHRONOS_validation");
 		}
