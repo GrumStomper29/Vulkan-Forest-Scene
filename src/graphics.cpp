@@ -6,6 +6,8 @@
 #include "swapchain.hpp"
 #include "cmd_buffer.hpp"
 
+#include "pipeline.hpp"
+
 #include "image_transition.hpp"
 
 #define GLFW_INCLUDE_NONE
@@ -41,12 +43,18 @@ namespace Graphics
 
 	void run()
 	{
+		constexpr int windowWidth{ 1920 };
+		constexpr int windowHeight{ 1080 };
+
 		// Core structures
-		Window window{ 1920 / 2, 1080 / 2, "Vulkan-Forest-Scene" };
+
+		Window window{ windowWidth, windowHeight, "Vulkan-Forest-Scene" };
 		Instance instance{ true };
 		Device device{ instance };
 		Swapchain swapchain{ window, instance, device, 4 };
 		CmdBuffer graphicsBuffer{ device, device.graphicsQueueFamily() };
+
+		Pipeline pipeline{ device, "shaders/uber_vertex.spv", "shaders/uber_fragment.spv", window.vkExtent() };
 
 		// Synchronization structs
 		VkSemaphore presentSemaphore{};
@@ -60,7 +68,7 @@ namespace Graphics
 		VkFenceCreateInfo fenceInfo{ .sType{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO } };
 		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 		vkCreateFence(device.vkDevice(), &fenceInfo, nullptr, &renderFence);
-
+		
 		while (!window.shouldClose())
 		{
 			window.pollEvents();
@@ -81,7 +89,7 @@ namespace Graphics
 			colorAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
 			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			colorAttachment.clearValue = { { 0.0f, 0.0f, 1.0f, 1.0f } };
+			colorAttachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
 			VkRenderingInfo renderInfo{ .sType{ VK_STRUCTURE_TYPE_RENDERING_INFO } };
 			renderInfo.renderArea = VkRect2D{ {}, window.vkExtent() };
@@ -92,7 +100,9 @@ namespace Graphics
 
 			vkCmdBeginRendering(graphicsBuffer.vkCommandBuffer(), &renderInfo);
 
-			// Absolutely no rendering done.
+			vkCmdBindPipeline(graphicsBuffer.vkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vkPipeline());
+
+			vkCmdDraw(graphicsBuffer.vkCommandBuffer(), 3, 1, 0, 0);
 
 			vkCmdEndRendering(graphicsBuffer.vkCommandBuffer());
 
@@ -110,7 +120,7 @@ namespace Graphics
 
 			window.swapBuffers();
 		}
-
+		
 		vkDeviceWaitIdle(device.vkDevice());
 
 		vkDestroyFence(device.vkDevice(), renderFence, nullptr);

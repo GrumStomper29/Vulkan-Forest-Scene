@@ -11,8 +11,10 @@ namespace Graphics
 
 	Window::Window(std::uint32_t width, std::uint32_t height, const char* title)
 		: m_extent{ width, height }
-		, m_windowHandle{ glfwCreateWindow(width, height, title, nullptr, nullptr)}
 	{
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+		m_windowHandle = glfwCreateWindow(width, height, title, glfwGetPrimaryMonitor(), nullptr);
+
 		if (!m_windowHandle)
 		{
 			throw std::runtime_error{ "error: GLFW failed to create window.\n" };
