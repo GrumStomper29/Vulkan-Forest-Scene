@@ -9,11 +9,19 @@
 namespace Graphics
 {
 
-	Window::Window(std::uint32_t width, std::uint32_t height, const char* title)
+	Window::Window(std::uint32_t width, std::uint32_t height, const char* title, bool fullscreen)
 		: m_extent{ width, height }
 	{
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-		m_windowHandle = glfwCreateWindow(width, height, title, glfwGetPrimaryMonitor(), nullptr);
+
+		if (fullscreen)
+		{
+			m_windowHandle = glfwCreateWindow(width, height, title, glfwGetPrimaryMonitor(), nullptr);
+		}
+		else
+		{
+			m_windowHandle = glfwCreateWindow(width, height, title, nullptr, nullptr);
+		}
 
 		if (!m_windowHandle)
 		{

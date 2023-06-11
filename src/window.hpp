@@ -13,7 +13,7 @@ namespace Graphics
 	class Window final
 	{
 	public:
-		Window(std::uint32_t width, std::uint32_t height, const char* title);
+		Window(std::uint32_t width, std::uint32_t height, const char* title, bool fullscreen);
 		
 		Window(Window&) = delete;
 		Window& operator=(Window&) = delete;

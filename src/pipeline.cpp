@@ -1,8 +1,11 @@
 #include "pipeline.hpp"
 
 #include "device.hpp"
+#include "mesh.hpp"
 
 #include "volk/volk.h"
+
+#include "glm/glm.hpp"
 
 #include <cstdint>
 #include <fstream>
@@ -15,7 +18,8 @@ namespace Graphics
 {
 
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule module);
-	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo();
+	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo(const std::vector<VkVertexInputBindingDescription>& bindings,
+		const std::vector<VkVertexInputAttributeDescription>& attribs);
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo();
 	VkPipelineViewportStateCreateInfo viewportStateCreateInfo(const VkViewport& viewport, const VkRect2D& scissor);
 	VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo(VkCullModeFlags cullMode, VkFrontFace frontFace);
@@ -34,7 +38,33 @@ namespace Graphics
 			shaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShaderModule)
 		};
 
-		auto vertexInputState{ vertexInputStateCreateInfo() };
+		// This has to be a vector. Don't argue with it.
+		std::vector<VkVertexInputBindingDescription> bindingDescription
+		{ {
+				.binding = 0,
+				.stride = sizeof(Vertex),
+				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX, 
+		} };
+
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(4);
+
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof(Vertex, Vertex::pos);
+
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, Vertex::norm);
+
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(Vertex, Vertex::col);
+
+		attributeDescriptions[3].location = 3;
+		attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[3].offset = offsetof(Vertex, Vertex::tex);
+
+		auto vertexInputState{ vertexInputStateCreateInfo(bindingDescription, attributeDescriptions) };
 
 		auto inputAssemblyState{ inputAssemblyStateCreateInfo() };
 
@@ -51,9 +81,17 @@ namespace Graphics
 
 		auto colorBlendState{ colorBlendStateCreateInfo({ attachment }) };
 
+		VkPushConstantRange pushConstantRange
+		{
+			.stageFlags{ VK_SHADER_STAGE_VERTEX_BIT },
+			.offset{ 0 },
+			.size{ sizeof(glm::mat4) }
+		};
+
 		VkPipelineLayoutCreateInfo layoutInfo{ .sType{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO } };
 		layoutInfo.setLayoutCount = 0;
-		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pushConstantRangeCount = 1;
+		layoutInfo.pPushConstantRanges = &pushConstantRange;
 
 		vkCreatePipelineLayout(m_device.vkDevice(), &layoutInfo, nullptr, &m_layout);
 
@@ -119,11 +157,14 @@ namespace Graphics
 		return stageInfo;
 	}
 
-	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo()
+	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo(const std::vector<VkVertexInputBindingDescription>& bindings, 
+		const std::vector<VkVertexInputAttributeDescription>& attribs)
 	{
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{ .sType{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } };
-		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.vertexBindingDescriptionCount = bindings.size();
+		vertexInputInfo.pVertexBindingDescriptions = bindings.data();
+		vertexInputInfo.vertexAttributeDescriptionCount = attribs.size();
+		vertexInputInfo.pVertexAttributeDescriptions = attribs.data();
 
 		return vertexInputInfo;
 	}
