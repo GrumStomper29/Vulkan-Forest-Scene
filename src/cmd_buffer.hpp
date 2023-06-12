@@ -8,6 +8,9 @@
 #include <memory>
 #include <vector>
 
+// temp
+#include <iostream>
+
 namespace Graphics
 {
 
@@ -28,7 +31,7 @@ namespace Graphics
 
 		void end()
 		{
-			vkEndCommandBuffer(m_buffer);
+			std::cout << "end cmd: " << vkEndCommandBuffer(m_buffer) << '\n';
 		}
 
 		VkResult submit(const std::vector<VkSemaphore>& waitSemaphores,

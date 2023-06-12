@@ -4,6 +4,9 @@
 
 #include "volk/volk.h"
 
+// temp
+#include <iostream>
+
 namespace Graphics
 {
 
@@ -13,7 +16,7 @@ namespace Graphics
 		imgBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		imgBarrier.srcAccessMask = VK_ACCESS_2_NONE;
 		imgBarrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-		imgBarrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR;
+		imgBarrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
 		imgBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imgBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		imgBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -38,7 +41,7 @@ namespace Graphics
 	{
 		VkImageMemoryBarrier2 imgBarrier{ .sType{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 } };
 		imgBarrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-		imgBarrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR;
+		imgBarrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
 		imgBarrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
 		imgBarrier.dstAccessMask = VK_ACCESS_2_NONE;
 		imgBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -53,6 +56,8 @@ namespace Graphics
 			.baseArrayLayer{ 0 },
 			.layerCount{ 1 }
 		};
+
+		std::cout << "preparing image for presentation\n";
 
 		VkDependencyInfo dependencyInfo{ .sType{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO } };
 		dependencyInfo.imageMemoryBarrierCount = 1;

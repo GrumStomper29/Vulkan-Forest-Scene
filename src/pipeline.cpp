@@ -24,12 +24,39 @@ namespace Graphics
 	VkPipelineViewportStateCreateInfo viewportStateCreateInfo(const VkViewport& viewport, const VkRect2D& scissor);
 	VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo(VkCullModeFlags cullMode, VkFrontFace frontFace);
 	VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo();
+
+	VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo()
+	{
+		return VkPipelineDepthStencilStateCreateInfo
+		{
+			.sType{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO },
+			.depthTestEnable{ VK_FALSE },
+			.depthWriteEnable{ VK_FALSE },
+			.depthCompareOp{ VK_COMPARE_OP_LESS },
+			.stencilTestEnable{ VK_FALSE },
+			.minDepthBounds{ 0.0f },
+			.maxDepthBounds{ 1.0f },
+
+		};
+	}
+
 	VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo(const std::vector<VkPipelineColorBlendAttachmentState>& attachments);
 
 	Pipeline::Pipeline(const Device& device, const char* vertexBinPath, const char* fragmentBinPath, VkExtent2D windowExtent)
 		: m_device{ device }
 		, m_viewport{ 0.0f, 0.0f, static_cast<float>(windowExtent.width), static_cast<float>(windowExtent.height), 0.0f, 1.0f }
 	{
+		VkFormat colorAttachmentFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+
+		VkPipelineRenderingCreateInfo renderingInfo
+		{
+			.sType{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO },
+			.colorAttachmentCount{ 1 },
+			.pColorAttachmentFormats{ &colorAttachmentFormat },
+			.depthAttachmentFormat{ VK_FORMAT_UNDEFINED },
+			.stencilAttachmentFormat{ VK_FORMAT_UNDEFINED },
+		};
+
 		auto vertexShaderModule{ loadShader(vertexBinPath, m_device.vkDevice()) };
 		auto fragmentShaderModule{ loadShader(fragmentBinPath, m_device.vkDevice()) };
 
@@ -79,6 +106,8 @@ namespace Graphics
 		attachment.blendEnable = VK_FALSE;
 		attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
+		auto depthStencilState{ depthStencilStateCreateInfo() };
+
 		auto colorBlendState{ colorBlendStateCreateInfo({ attachment }) };
 
 		VkPushConstantRange pushConstantRange
@@ -96,6 +125,7 @@ namespace Graphics
 		vkCreatePipelineLayout(m_device.vkDevice(), &layoutInfo, nullptr, &m_layout);
 
 		VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo{ .sType{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO } };
+		graphicsPipelineCreateInfo.pNext = &renderingInfo;
 		graphicsPipelineCreateInfo.stageCount = 2;
 		graphicsPipelineCreateInfo.pStages = &stages[0];
 		graphicsPipelineCreateInfo.pVertexInputState = &vertexInputState;
@@ -103,6 +133,7 @@ namespace Graphics
 		graphicsPipelineCreateInfo.pViewportState = &viewportState;
 		graphicsPipelineCreateInfo.pRasterizationState = &rasterizationState;
 		graphicsPipelineCreateInfo.pMultisampleState = &multisampleState;
+		graphicsPipelineCreateInfo.pDepthStencilState = &depthStencilState;
 		graphicsPipelineCreateInfo.pColorBlendState = &colorBlendState;
 		graphicsPipelineCreateInfo.layout = m_layout;
 
@@ -216,8 +247,8 @@ namespace Graphics
 	VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo(const std::vector<VkPipelineColorBlendAttachmentState>& attachments)
 	{
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ .sType{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO } };
-		colorBlendInfo.logicOpEnable = VK_TRUE;
-		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY; // Experiment with this
+		colorBlendInfo.logicOpEnable = VK_FALSE;
+		//colorBlendInfo.logicOp = VK_LOGIC_OP_COPY; // Experiment with this
 		colorBlendInfo.attachmentCount = attachments.size();
 		colorBlendInfo.pAttachments = attachments.data();
 

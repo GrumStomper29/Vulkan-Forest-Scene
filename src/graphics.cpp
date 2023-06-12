@@ -117,17 +117,19 @@ namespace Graphics
 		return vertexBuffer;
 	}
 
-	glm::mat4 calculateTransform(int frameNumber)
+	glm::mat4 calculateTransform()
 	{
-		constexpr glm::vec3 camPos{ 0.0f, 0.0f, -2.0f };
+		static std::uint64_t frame{ 0 };
+
+		constexpr glm::vec3 camPos{ 0.0f, 1.0f, -2.0f };
 
 		glm::mat4 view{ glm::translate(glm::mat4(1.0f), camPos) };
 
 		glm::mat4 proj{ glm::perspective(glm::radians(70.0f), 1700.0f / 900.0f, 0.1f, 200.0f) };
 
-		glm::mat4 model{ glm::rotate(glm::mat4{ 1.0f }, glm::radians(frameNumber * 0.04f), glm::vec3{ 0.0f, 1.0f, 0.0f }) };
+		glm::mat4 model{ glm::rotate(glm::mat4{ 1.0f }, glm::radians(frame++ * 0.04f), glm::vec3{ 0.0f, 1.0f, 0.0f }) };
 
-		model *= 0.01f;
+		model = glm::scale(model, glm::vec3{ 0.1f });
 
 		return proj * view * model;
 	}
@@ -152,7 +154,7 @@ namespace Graphics
 		Swapchain swapchain{ window, instance, device, 4 };
 		CmdBuffer graphicsBuffer{ device, device.graphicsQueueFamily() };
 
-		Pipeline pipeline{ device, "shaders/uber_vertex.spv", "shaders/uber_fragment.spv", window.vkExtent() };
+		Pipeline pipeline{ device, "shaders/uber.vert.spv", "shaders/uber.frag.spv", window.vkExtent() };
 
 		// Synchronization structs
 		VkSemaphore presentSemaphore{};
@@ -168,8 +170,8 @@ namespace Graphics
 
 		// Meshes
 		std::vector<Vertex> vertices{};
-		auto indices{ loadOBJ("assets/american_elm_tree_obj/American Elm01 tree.obj", vertices) };
-		//auto indices{ loadOBJ("assets/monkey_smooth.obj", vertices) };
+		//auto indices{ loadOBJ("assets/american_elm_tree_obj/American Elm01 tree.obj", vertices) };
+		auto indices{ loadOBJ("assets/monkey_smooth.obj", vertices) };
 		const int vertexCount{ static_cast<int>(vertices.size()) };
 		const VkDeviceSize vertexBufferSize{ vertices.size() * sizeof(Vertex) };
 
@@ -177,15 +179,19 @@ namespace Graphics
 
 		int frameNumber{ 0 };
 
+		std::cout << "Engine finished loading. Proceding to rendering loop. \n\n";
+
 		while (!window.shouldClose())
 		{
+			std::cout << "FRAME: \n";
+
 			window.pollEvents();
 
-			std::uint32_t swapchainImageIndex{ swapchain.acquireNextImage(presentSemaphore) };
+			std::uint32_t swapchainImageIndex{ swapchain.acquireNextImage(presentSemaphore, renderFence) };
 
 			graphicsBuffer.reset();
 			graphicsBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
+			// Good here on
 			prepareImageForColorAttachmentOutput(swapchain.vkImages()[swapchainImageIndex], graphicsBuffer);
 
 			VkRenderingAttachmentInfo colorAttachment{ .sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO } };
@@ -196,18 +202,30 @@ namespace Graphics
 			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			colorAttachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
+			VkRenderingAttachmentInfo depthAttachment
+			{
+				.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
+				.imageView{ swapchain.depthVkImageView() },
+				.imageLayout{ VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL },
+				.resolveMode{ VK_RESOLVE_MODE_NONE },
+				.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
+				.storeOp{ VK_ATTACHMENT_STORE_OP_DONT_CARE },
+				.clearValue{ .depthStencil{ .depth{ 1.0f } } },
+			};
+
 			VkRenderingInfo renderInfo{ .sType{ VK_STRUCTURE_TYPE_RENDERING_INFO } };
 			renderInfo.renderArea = VkRect2D{ {}, window.vkExtent() };
 			renderInfo.layerCount = 1;
 			renderInfo.viewMask = 0;
 			renderInfo.colorAttachmentCount = 1;
 			renderInfo.pColorAttachments = &colorAttachment;
+			//renderInfo.pDepthAttachment = &depthAttachment;
 
 			vkCmdBeginRendering(graphicsBuffer.vkCommandBuffer(), &renderInfo);
 
 			vkCmdBindPipeline(graphicsBuffer.vkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vkPipeline());
 
-			PushConstants pushConstants{ .transform{ calculateTransform(++frameNumber) } };
+			PushConstants pushConstants{ .transform{ calculateTransform() } };
 			vkCmdPushConstants(graphicsBuffer.vkCommandBuffer(), pipeline.vkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
 
 			VkDeviceSize offset{ 0 };
@@ -220,12 +238,13 @@ namespace Graphics
 			prepareImageForPresentation(swapchain.vkImages()[swapchainImageIndex], graphicsBuffer);
 
 			graphicsBuffer.end();
+			// Fine here 
 
-			graphicsBuffer.submit({ presentSemaphore },
+			std::cout << "queueSubmit: " << graphicsBuffer.submit({presentSemaphore},
 				{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
 				{ renderSemaphore },
 				device.graphicsQueue(),
-				renderFence);
+				renderFence) << '\n';
 
 			swapchain.queuePresent({ renderSemaphore }, swapchainImageIndex);
 
@@ -233,6 +252,13 @@ namespace Graphics
 
 			vkWaitForFences(device.vkDevice(), 1, &renderFence, VK_TRUE, 60000000000); // Wait up to one minute
 			vkResetFences(device.vkDevice(), 1, &renderFence);
+
+			std::cout << "\n\n\n";
+
+			if (frameNumber++ > 1)
+			{
+				//break;
+			}
 		}
 
 		vkDeviceWaitIdle(device.vkDevice());

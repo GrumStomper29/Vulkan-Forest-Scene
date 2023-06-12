@@ -5,6 +5,9 @@
 #include <cstdint>
 #include <memory>
 
+// temp
+#include <iostream>
+
 namespace Graphics
 {
 
@@ -38,14 +41,14 @@ namespace Graphics
 
 	void CmdBuffer::reset(VkCommandBufferResetFlags flags)
 	{
-		vkResetCommandBuffer(m_buffer, flags);
+		std::cout << "reset cmd: " << vkResetCommandBuffer(m_buffer, flags) << '\n';
 	}
 
 	void CmdBuffer::begin(VkCommandBufferUsageFlags flags)
 	{
 		VkCommandBufferBeginInfo beginInfo{ .sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO } };
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		vkBeginCommandBuffer(m_buffer, &beginInfo);
+		std::cout << "begin command buffer: " << vkBeginCommandBuffer(m_buffer, &beginInfo) << '\n';
 	}
 
 	VkResult CmdBuffer::submit(const std::vector<VkSemaphore>& waitSemaphores,

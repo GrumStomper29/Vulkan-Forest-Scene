@@ -7,8 +7,13 @@
 #include "device.hpp"
 #include "cmd_buffer.hpp"
 
+#include "image.hpp"
+
 #include <cstdint>
 #include <vector>
+
+// temp
+#include <iostream>
 
 namespace Graphics
 {
@@ -47,10 +52,24 @@ namespace Graphics
 			return m_imageViews;
 		}
 
-		std::uint32_t acquireNextImage(VkSemaphore semaphore) const
+		const Image& depthImage() const
+		{
+			return m_depthImage;
+		}
+
+		VkImageView depthVkImageView() const
+		{
+			return m_depthImageView;
+		}
+
+		std::uint32_t acquireNextImage(VkSemaphore semaphore, VkFence& fence) const
 		{
 			std::uint32_t imageIndex{};
-			vkAcquireNextImageKHR(m_device.vkDevice(), m_swapchain, 60000000000, semaphore, VK_NULL_HANDLE, &imageIndex);
+			std::cout << "acquire next image: " << vkAcquireNextImageKHR(m_device.vkDevice(), m_swapchain, 60000000000, semaphore, VK_NULL_HANDLE, &imageIndex) << '\n';
+
+			//vkWaitForFences(m_device.vkDevice(), 1, &fence, VK_TRUE, 60000000000); // Wait up to one minute
+			//vkResetFences(m_device.vkDevice(), 1, &fence);
+
 			return imageIndex;
 		}
 
@@ -75,6 +94,9 @@ namespace Graphics
 
 		std::vector<VkImage> m_images{};
 		std::vector<VkImageView> m_imageViews{};
+
+		Image m_depthImage{};
+		VkImageView m_depthImageView{};
 	};
 
 }
