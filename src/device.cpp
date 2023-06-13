@@ -55,7 +55,7 @@ namespace Graphics
 		queueInfo.pQueuePriorities = &queuePriority;
 
 		std::vector<const char*> extensions{};
-		extensions.push_back("VK_KHR_swapchain");
+		extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
 		VkDeviceCreateInfo deviceInfo{ .sType{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO } };
 		deviceInfo.pNext = &vulkan13Features;

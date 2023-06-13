@@ -248,7 +248,7 @@ namespace Graphics
 	{
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo{ .sType{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO } };
 		colorBlendInfo.logicOpEnable = VK_FALSE;
-		//colorBlendInfo.logicOp = VK_LOGIC_OP_COPY; // Experiment with this
+		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY; // Experiment with this
 		colorBlendInfo.attachmentCount = attachments.size();
 		colorBlendInfo.pAttachments = attachments.data();
 

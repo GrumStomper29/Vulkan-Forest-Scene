@@ -129,7 +129,7 @@ namespace Graphics
 
 		glm::mat4 model{ glm::rotate(glm::mat4{ 1.0f }, glm::radians(frame++ * 0.04f), glm::vec3{ 0.0f, 1.0f, 0.0f }) };
 
-		model = glm::scale(model, glm::vec3{ 0.1f });
+		model = glm::scale(model, glm::vec3{ 1.0f });
 
 		return proj * view * model;
 	}
@@ -226,12 +226,12 @@ namespace Graphics
 			vkCmdBindPipeline(graphicsBuffer.vkCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vkPipeline());
 
 			PushConstants pushConstants{ .transform{ calculateTransform() } };
-			vkCmdPushConstants(graphicsBuffer.vkCommandBuffer(), pipeline.vkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
+			//vkCmdPushConstants(graphicsBuffer.vkCommandBuffer(), pipeline.vkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
 
 			VkDeviceSize offset{ 0 };
-			vkCmdBindVertexBuffers(graphicsBuffer.vkCommandBuffer(), 0, 1, &vertexBuffer.buffer, &offset);
+			//vkCmdBindVertexBuffers(graphicsBuffer.vkCommandBuffer(), 0, 1, &vertexBuffer.buffer, &offset);
 
-			vkCmdDraw(graphicsBuffer.vkCommandBuffer(), vertexCount, 1, 0, 0);
+			//vkCmdDraw(graphicsBuffer.vkCommandBuffer(), vertexCount, 1, 0, 0);
 
 			vkCmdEndRendering(graphicsBuffer.vkCommandBuffer());
 
@@ -246,9 +246,7 @@ namespace Graphics
 				device.graphicsQueue(),
 				renderFence) << '\n';
 
-			swapchain.queuePresent({ renderSemaphore }, swapchainImageIndex);
-
-			window.swapBuffers();
+			std::cout << "Queue present: " << swapchain.queuePresent({renderSemaphore}, swapchainImageIndex) << '\n';
 
 			vkWaitForFences(device.vkDevice(), 1, &renderFence, VK_TRUE, 60000000000); // Wait up to one minute
 			vkResetFences(device.vkDevice(), 1, &renderFence);

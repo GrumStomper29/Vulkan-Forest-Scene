@@ -30,6 +30,8 @@ namespace Graphics
 			.layerCount{ 1 }
 		};
 
+		std::cout << "preparing image for color attachment output\n";
+
 		VkDependencyInfo dependencyInfo{ .sType{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO } };
 		dependencyInfo.imageMemoryBarrierCount = 1;
 		dependencyInfo.pImageMemoryBarriers = &imgBarrier;

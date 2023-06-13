@@ -1,0 +1,63 @@
+Launching Vulkan Application:
+- Layers overridden by "Validation" configuration.
+- Application: vkcube
+- Executable: C:\dev\Vulkan-Forest-Scene\x64\Debug\Vulkan-Forest-Scene.exe
+- Working Directory: C:\dev\Vulkan-Forest-Scene
+- Command-line Arguments: --suppress_popups
+- Log file: C:\dev\Vulkan-Forest-Scene\log.txt
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win32.json
+ERROR:            loader_get_json: Failed to open JSON file C:\Program Files (x86)\Epic Games\Launcher\Portal\Extras\Overlay\EOSOverlayVkLayer-Win64.json
+tinyobj: warning: Material file [ monkey_smooth.mtl ] not found in a path : assets\
+Failed to load material file(s). Use default material.
+material [ 'None' ] not found in .mtl
+
+reset cmd: 0
+begin command buffer: 0
+end cmd: 0
+Engine finished loading. Proceding to rendering loop. 
+
+FRAME: 
+acquire next image: 0
+reset cmd: 0
+begin command buffer: 0
+preparing image for color attachment output
+preparing image for presentation
+end cmd: 0
+queueSubmit: 0
+Queue present: 0
+
+
+
+FRAME: 
+acquire next image: 0
+reset cmd: 0
+begin command buffer: 0
+preparing image for color attachment output
+preparing image for presentation
+end cmd: 0
+queueSubmit: 0
+Queue present: 0
+
+
+
+FRAME: 
+acquire next image: 0
+reset cmd: 0
+begin command buffer: 0
+preparing image for color attachment output
+preparing image for presentation
+end cmd: 0
+queueSubmit: 0
+Queue present: 0
+
+
+
+Process terminated

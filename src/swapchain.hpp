@@ -73,7 +73,7 @@ namespace Graphics
 			return imageIndex;
 		}
 
-		VkResult queuePresent(const std::vector<VkSemaphore>& waitSemaphores, std::uint32_t imageIndex)
+		VkResult queuePresent(const std::vector<VkSemaphore>& waitSemaphores, std::uint32_t& imageIndex)
 		{
 			VkPresentInfoKHR presentInfo{ .sType{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR } };
 			presentInfo.waitSemaphoreCount = waitSemaphores.size();
