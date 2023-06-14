@@ -5,6 +5,8 @@
 #include "cmd_buffer.hpp"
 #include "sync.hpp"
 
+#include "pipeline.hpp"
+
 #include "volk/volk.h"
 #include <GLFW/glfw3.h>
 
@@ -31,10 +33,10 @@ namespace Graphics
 
 	void run()
 	{
-		constexpr VkExtent2D	windowExtent					{ 640, 480 };
-		const char*				windowTitle						{ "Vulkan Forest Scene" };
-		constexpr int			preferredSwapchainImageCount	{ 4 };
-		constexpr VkFormat		swapchainImageFormat			{ VK_FORMAT_B8G8R8A8_SRGB };
+		constexpr VkExtent2D    windowExtent                    { 640, 480 };
+		const char*             windowTitle                     { "Vulkan Forest Scene" };
+		constexpr int           preferredSwapchainImageCount    { 4 };
+		constexpr VkFormat      swapchainImageFormat            { VK_FORMAT_B8G8R8A8_SRGB };
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		GLFWwindow* window{ glfwCreateWindow(windowExtent.width, windowExtent.height, windowTitle, nullptr, nullptr) };
@@ -43,22 +45,25 @@ namespace Graphics
 			throw std::exception{ "failed to create window" };
 		}
 
-		VkInstance					instance			{ Graphics::createInstance(true) };
-		VkPhysicalDevice			physicalDevice		{ Graphics::getPhysicalDevice(instance) };
-		std::uint32_t				graphicsQueueFamily	{ Graphics::getGraphicsQueueFamily(physicalDevice) };
-		VkQueue						graphicsQueue{};
-		VkDevice					device				{ Graphics::createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
-		VkSurfaceKHR				surface{};
+		VkInstance                  instance            { Graphics::createInstance(true) };
+		VkPhysicalDevice            physicalDevice      { Graphics::getPhysicalDevice(instance) };
+		std::uint32_t               graphicsQueueFamily { Graphics::getGraphicsQueueFamily(physicalDevice) };
+		VkQueue                     graphicsQueue{};
+		VkDevice                    device              { Graphics::createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
+		VkSurfaceKHR                surface{};
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
-		VkSwapchainKHR				swapchain			{ Graphics::createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
-		std::vector<VkImage>		swapchainImages		{ Graphics::getSwapchainImages(device, swapchain) };
-		std::vector<VkImageView>	swapchainImageViews	{ Graphics::createSwapchainImageViews(device, swapchainImages, swapchainImageFormat) };
+		VkSwapchainKHR              swapchain           { Graphics::createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
+		std::vector<VkImage>        swapchainImages     { Graphics::getSwapchainImages(device, swapchain) };
+		std::vector<VkImageView>    swapchainImageViews { Graphics::createSwapchainImageViews(device, swapchainImages, swapchainImageFormat) };
 
 		VkCommandPool				cmdPool				{ Graphics::createCommandPool(device, graphicsQueueFamily, true) };
 		VkCommandBuffer				mainCmdBuffer		{ Graphics::allocateCommandBuffer(device, cmdPool) };
 		VkFence						fence				{ Graphics::createFence(device, false) };
 		VkSemaphore					renderSemaphore		{ Graphics::createSemaphore(device) };
 		VkSemaphore					presentSemaphore	{ Graphics::createSemaphore(device) };
+
+		VkPipelineLayout            pipelineLayout      { createPipelineLayout(device) };
+		VkPipeline                  pipeline            { createPipeline(device, pipelineLayout, windowExtent, swapchainImageFormat) };
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -100,6 +105,10 @@ namespace Graphics
 
 			vkCmdBeginRendering(mainCmdBuffer, &renderingInfo);
 
+			vkCmdBindPipeline(mainCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+			vkCmdDraw(mainCmdBuffer, 3, 1, 0, 0);
+
 			vkCmdEndRendering(mainCmdBuffer);
 
 			Graphics::prepareImageForPresentation(mainCmdBuffer, swapchainImages[swapchainImageIndex]);
@@ -116,6 +125,9 @@ namespace Graphics
 
 			glfwPollEvents();
 		}
+
+		vkDestroyPipeline(device, pipeline, nullptr);
+		vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
 		vkDestroySemaphore(device, presentSemaphore, nullptr);
 		vkDestroySemaphore(device, renderSemaphore, nullptr);
