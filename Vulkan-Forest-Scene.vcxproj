@@ -69,10 +69,11 @@
     <ExternalIncludePath>$(VK_SDK_PATH)/Include;$(ExternalIncludePath)</ExternalIncludePath>
     <LibraryPath>$(SolutionDir)/third_party;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SolutionDir)/src;$(SourcePath)</SourcePath>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
     <IncludePath>$(SolutionDir)/third_party;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(VK_SDK_PATH)/Include;$(ExternalIncludePath)</ExternalIncludePath>
     <LibraryPath>$(SolutionDir)/third_party;$(LibraryPath)</LibraryPath>
@@ -84,10 +85,11 @@
     <ExternalIncludePath>$(VK_SDK_PATH)/Include;$(ExternalIncludePath)</ExternalIncludePath>
     <LibraryPath>$(SolutionDir)/third_party;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SolutionDir)/src;$(SourcePath)</SourcePath>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
     <IncludePath>$(SolutionDir)/third_party;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(VK_SDK_PATH)/Include;$(ExternalIncludePath)</ExternalIncludePath>
     <LibraryPath>$(SolutionDir)/third_party;$(LibraryPath)</LibraryPath>
@@ -102,6 +104,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -113,6 +116,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -126,6 +130,7 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -139,10 +144,24 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\cmd_buffer.cpp" />
+    <ClCompile Include="src\device.cpp" />
+    <ClCompile Include="src\instance.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\swapchain.cpp" />
+    <ClCompile Include="src\sync.cpp" />
+    <ClCompile Include="third_party\volk\volk.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\cmd_buffer.hpp" />
+    <ClInclude Include="src\device.hpp" />
+    <ClInclude Include="src\instance.hpp" />
+    <ClInclude Include="src\swapchain.hpp" />
+    <ClInclude Include="src\sync.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

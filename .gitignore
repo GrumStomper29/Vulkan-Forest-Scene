@@ -2,5 +2,6 @@
 /Debug
 /Release
 /x64
+/bin
 
 *.vcxproj.user

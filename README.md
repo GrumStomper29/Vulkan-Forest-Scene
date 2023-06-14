@@ -1,5 +1,7 @@
 # Vulkan-Forest-Scene
-A massive forest scene rendered in Vulkan
+A massive forest scene rendered in Vulkan.
+
+Application will be built to bin/
 
 Requires Vulkan SDK.
 
