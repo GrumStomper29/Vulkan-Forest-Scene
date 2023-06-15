@@ -1,5 +1,7 @@
 #include "pipeline.hpp"
 
+#include "mesh.hpp"
+
 #include "volk/volk.h"
 
 #include <cstddef>
@@ -46,9 +48,18 @@ namespace Graphics
 
 	VkPipelineLayout createPipelineLayout(VkDevice device)
 	{
+		VkPushConstantRange range
+		{
+			.stageFlags{ VK_SHADER_STAGE_VERTEX_BIT },
+			.offset{ 0 },
+			.size{ sizeof(PushConstants) }
+		};
+
 		VkPipelineLayoutCreateInfo layoutCI
 		{
 			.sType{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO },
+			.pushConstantRangeCount{ 1 },
+			.pPushConstantRanges{ &range },
 		};
 
 		VkPipelineLayout layout{};
@@ -65,7 +76,7 @@ namespace Graphics
 			.viewMask{ 0 },
 			.colorAttachmentCount{ 1 },
 			.pColorAttachmentFormats{ &colorAttachmentFormat },
-			.depthAttachmentFormat{ VK_FORMAT_UNDEFINED },
+			.depthAttachmentFormat{ VK_FORMAT_D32_SFLOAT },
 			.stencilAttachmentFormat{ VK_FORMAT_UNDEFINED },
 		};
 
@@ -88,9 +99,50 @@ namespace Graphics
 			.pName{ "main" },
 		};
 
+		VkVertexInputBindingDescription binding
+		{
+			.binding{ 0 },
+			.stride{ sizeof(Vertex) },
+			.inputRate{ VK_VERTEX_INPUT_RATE_VERTEX },
+		};
+
+		VkVertexInputAttributeDescription attribs[4]{};
+		attribs[0] =
+		{
+			.location{ 0 },
+			.binding{ 0 },
+			.format{ VK_FORMAT_R32G32B32_SFLOAT },
+			.offset{ offsetof(Vertex, Vertex::pos) },
+		};
+		attribs[1] =
+		{
+			.location{ 1 },
+			.binding{ 0 },
+			.format{ VK_FORMAT_R32G32B32_SFLOAT },
+			.offset{ offsetof(Vertex, Vertex::norm) },
+		};
+		attribs[2] =
+		{
+			.location{ 2 },
+			.binding{ 0 },
+			.format{ VK_FORMAT_R32G32B32_SFLOAT },
+			.offset{ offsetof(Vertex, Vertex::color) },
+		};
+		attribs[3] =
+		{
+			.location{ 3 },
+			.binding{ 0 },
+			.format{ VK_FORMAT_R32G32_SFLOAT },
+			.offset{ offsetof(Vertex, Vertex::norm) },
+		};
+
 		VkPipelineVertexInputStateCreateInfo vertexInputState
 		{
 			.sType{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO },
+			.vertexBindingDescriptionCount{ 1 },
+			.pVertexBindingDescriptions{ &binding },
+			.vertexAttributeDescriptionCount{ 4 },
+			.pVertexAttributeDescriptions{ &attribs[0] },
 		};
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyState
@@ -146,6 +198,18 @@ namespace Graphics
 			.alphaToOneEnable{ VK_FALSE },
 		};
 
+		VkPipelineDepthStencilStateCreateInfo depthStencilState
+		{
+			.sType{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO },
+			.depthTestEnable{ VK_TRUE },
+			.depthWriteEnable{ VK_TRUE },
+			.depthCompareOp{ VK_COMPARE_OP_LESS },
+			.depthBoundsTestEnable{ VK_FALSE },
+			.stencilTestEnable{ VK_FALSE },
+			.minDepthBounds{ 0.0f },
+			.maxDepthBounds{ 1.0f },
+		};
+
 		VkPipelineColorBlendAttachmentState attachment
 		{
 			.blendEnable{ VK_FALSE },
@@ -171,6 +235,7 @@ namespace Graphics
 			.pViewportState{ &viewportState },
 			.pRasterizationState{ &rasterizationState },
 			.pMultisampleState{ &multisampleState },
+			.pDepthStencilState{ &depthStencilState },
 			.pColorBlendState{ &colorBlendState },
 			.layout{ layout },
 		};

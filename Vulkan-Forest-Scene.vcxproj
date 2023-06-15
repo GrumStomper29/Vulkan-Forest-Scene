@@ -148,19 +148,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\alloc.cpp" />
     <ClCompile Include="src\cmd_buffer.cpp" />
     <ClCompile Include="src\device.cpp" />
     <ClCompile Include="src\instance.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\mesh.cpp" />
     <ClCompile Include="src\pipeline.cpp" />
     <ClCompile Include="src\swapchain.cpp" />
     <ClCompile Include="src\sync.cpp" />
     <ClCompile Include="third_party\volk\volk.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\alloc.hpp" />
     <ClInclude Include="src\cmd_buffer.hpp" />
     <ClInclude Include="src\device.hpp" />
     <ClInclude Include="src\instance.hpp" />
+    <ClInclude Include="src\mesh.hpp" />
     <ClInclude Include="src\pipeline.hpp" />
     <ClInclude Include="src\swapchain.hpp" />
     <ClInclude Include="src\sync.hpp" />

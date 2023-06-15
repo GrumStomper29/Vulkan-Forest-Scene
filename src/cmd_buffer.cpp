@@ -54,12 +54,12 @@ namespace Graphics
 		VkSubmitInfo submitInfo
 		{
 			.sType{ VK_STRUCTURE_TYPE_SUBMIT_INFO },
-			.waitSemaphoreCount{ 1 },
+			.waitSemaphoreCount{ (waitSemaphore == VK_NULL_HANDLE) ? 0u : 1u },
 			.pWaitSemaphores{ &waitSemaphore },
 			.pWaitDstStageMask{ &waitStage },
 			.commandBufferCount{ 1 },
 			.pCommandBuffers{ &commandBuffer },
-			.signalSemaphoreCount{ 1 },
+			.signalSemaphoreCount{ (signalSemaphore == VK_NULL_HANDLE) ? 0u : 1u },
 			.pSignalSemaphores{ &signalSemaphore },
 		};
 

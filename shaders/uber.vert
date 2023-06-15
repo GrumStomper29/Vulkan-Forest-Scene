@@ -1,12 +1,17 @@
 #version 450
 
+layout (location = 0) in vec3 inPos;
+layout (location = 1) in vec3 inNorm;
+
+layout (location = 0) out vec3 outColor;
+
+layout (push_constant) uniform constants
+{
+	mat4 vertexTransform;
+} PushConstants;
+
 void main()
 {
-	const vec3 vertices[3] = vec3[3](
-		vec3(1.0f, 1.0f, 0.0f),
-		vec3(-1.0f, 1.0f, 0.0f),
-		vec3(0.0f, -1.0f, 0.0f)
-	);
-
-	gl_Position = vec4(vertices[gl_VertexIndex], 1.0f);
+	gl_Position = PushConstants.vertexTransform * vec4(inPos, 1.0f);
+	outColor = inNorm;
 }
