@@ -5,6 +5,7 @@
 
 #include "cmd_buffer.hpp"
 #include "sync.hpp"
+#include "frame.hpp"
 
 #include "pipeline.hpp"
 
@@ -72,6 +73,24 @@ namespace Graphics
 		VkSemaphore					renderSemaphore		{ createSemaphore(device) };
 		VkSemaphore					presentSemaphore	{ createSemaphore(device) };
 
+		Frame frames[2]{};
+		frames[0] =
+		{
+			.renderSemaphore{ createSemaphore(device) },
+			.presentSemaphore{ createSemaphore(device) },
+			.renderFence{ createFence(device, false) },
+			.cmdPool{ createCommandPool(device, graphicsQueueFamily, true) },
+		};
+		frames[0].cmdBuffer = allocateCommandBuffer(device, frames[0].cmdPool);
+		frames[1] =
+		{
+			.renderSemaphore{ createSemaphore(device) },
+			.presentSemaphore{ createSemaphore(device) },
+			.renderFence{ createFence(device, false) },
+			.cmdPool{ createCommandPool(device, graphicsQueueFamily, true) },
+		};
+		frames[1].cmdBuffer = allocateCommandBuffer(device, frames[1].cmdPool);
+
 		VkPipelineLayout            pipelineLayout      { createPipelineLayout(device) };
 		VkPipeline                  pipeline            { createPipeline(device, pipelineLayout, windowExtent, swapchainImageFormat) };
 
@@ -81,8 +100,6 @@ namespace Graphics
 		loadOBJToVertices("assets/American Elm01 tree.obj", vertices, indices);
 		loadOBJToVertices("assets/monkey.obj", vertices, indices2);
 
-		std::cout << vertices.size() << '\n';
-
 		const std::uint32_t vertexCount{ static_cast<std::uint32_t>(vertices.size()) };
 		const std::uint32_t indexCount { static_cast<std::uint32_t>(indices.size()) };
 		const std::uint32_t indexCount2{ static_cast<std::uint32_t>(indices2.size()) };
@@ -91,21 +108,22 @@ namespace Graphics
 		Buffer indexBuffer { createIndexBuffer(indices, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
 		Buffer indexBuffer2{ createIndexBuffer(indices2, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
 
+		int frameNumber{ 0 };
 		bool firstFrame{ true };
 
 		while (!glfwWindowShouldClose(window))
 		{
-			std::uint32_t swapchainImageIndex{ acquireNextSwapchainImage(device, swapchain, presentSemaphore) };
+			std::uint32_t swapchainImageIndex{ acquireNextSwapchainImage(device, swapchain, frames[frameNumber].presentSemaphore) };
 
-			vkResetCommandBuffer(mainCmdBuffer, 0);
+			vkResetCommandPool(device, frames[frameNumber].cmdPool, 0);
 
-			beginCommandBuffer(mainCmdBuffer, true);
+			beginCommandBuffer(frames[frameNumber].cmdBuffer, true);
 
-			prepareImageForColorAttachmentOutput(mainCmdBuffer, swapchainImages[swapchainImageIndex]);
+			prepareImageForColorAttachmentOutput(frames[frameNumber].cmdBuffer, swapchainImages[swapchainImageIndex]);
 
 			if (firstFrame)
 			{
-				correctDepthImageLayout(depthImage.image, mainCmdBuffer);
+				correctDepthImageLayout(depthImage.image, frames[frameNumber].cmdBuffer);
 			}
 
 			VkRenderingAttachmentInfo colorAttachment
@@ -130,7 +148,7 @@ namespace Graphics
 				.resolveMode{ VK_RESOLVE_MODE_NONE },
 				.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
 				.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
-				.clearValue{.depthStencil{.depth{ 1.0f } } },
+				.clearValue{ .depthStencil{ .depth{ 1.0f } } },
 			};
 
 			VkRenderingInfo renderingInfo
@@ -148,14 +166,14 @@ namespace Graphics
 				.pDepthAttachment{ &depthAttachment },
 			};
 
-			vkCmdBeginRendering(mainCmdBuffer, &renderingInfo);
+			vkCmdBeginRendering(frames[frameNumber].cmdBuffer, &renderingInfo);
 
-			vkCmdBindPipeline(mainCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+			vkCmdBindPipeline(frames[frameNumber].cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
 			constexpr VkDeviceSize offset{ 0 };
-			vkCmdBindVertexBuffers(mainCmdBuffer, 0, 1, &vertexBuffer.buffer, &offset);
+			vkCmdBindVertexBuffers(frames[frameNumber].cmdBuffer, 0, 1, &vertexBuffer.buffer, &offset);
 
-			vkCmdBindIndexBuffer(mainCmdBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(frames[frameNumber].cmdBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
 			static std::uint64_t frame{ 0 };
 			constexpr glm::vec3 camPos{ 0.0f, 1.0f, -3.0f };
@@ -166,34 +184,34 @@ namespace Graphics
 			model = glm::scale(model, glm::vec3{ 0.001f });
 
 			PushConstants pushConstants{ proj * view * model };
-			vkCmdPushConstants(mainCmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
+			vkCmdPushConstants(frames[frameNumber].cmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
 
-			vkCmdDrawIndexed(mainCmdBuffer, indexCount, 1, 0, 0, 0);
+			vkCmdDrawIndexed(frames[frameNumber].cmdBuffer, indexCount, 1, 0, 0, 0);
 
-			vkCmdBindIndexBuffer(mainCmdBuffer, indexBuffer2.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(frames[frameNumber].cmdBuffer, indexBuffer2.buffer, 0, VK_INDEX_TYPE_UINT32);
 
 			model = glm::scale(model, glm::vec3{ 500.0f, 500.0f, 500.0f });
 			pushConstants.vertexTransform = proj * view * model;
-			vkCmdPushConstants(mainCmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
+			vkCmdPushConstants(frames[frameNumber].cmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
 
-			vkCmdDrawIndexed(mainCmdBuffer, indexCount2, 1, 0, 0, 0);
+			vkCmdDrawIndexed(frames[frameNumber].cmdBuffer, indexCount2, 1, 0, 0, 0);
 
-			vkCmdEndRendering(mainCmdBuffer);
+			vkCmdEndRendering(frames[frameNumber].cmdBuffer);
 
-			prepareImageForPresentation(mainCmdBuffer, swapchainImages[swapchainImageIndex]);
+			prepareImageForPresentation(frames[frameNumber].cmdBuffer, swapchainImages[swapchainImageIndex]);
 
-			vkEndCommandBuffer(mainCmdBuffer);
+			vkEndCommandBuffer(frames[frameNumber].cmdBuffer);
 
-			// Because of image transitions I have to wait until presentation is finished before the pipeline can begin
-			queueSubmit(graphicsQueue, mainCmdBuffer, presentSemaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, renderSemaphore, fence);
+			queueSubmit(graphicsQueue, frames[frameNumber].cmdBuffer, frames[frameNumber].presentSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, frames[frameNumber].renderSemaphore, frames[frameNumber].renderFence);
 
-			swapchainQueuePresent(graphicsQueue, swapchain, renderSemaphore, swapchainImageIndex);
+			swapchainQueuePresent(graphicsQueue, swapchain, frames[frameNumber].renderSemaphore, swapchainImageIndex);
 
-			vkWaitForFences(device, 1, &fence, VK_TRUE, secondsToNanoseconds(1));
-			vkResetFences(device, 1, &fence);
+			vkWaitForFences(device, 1, &frames[frameNumber].renderFence, VK_TRUE, secondsToNanoseconds(1));
+			vkResetFences(device, 1, &frames[frameNumber].renderFence);
 
 			glfwPollEvents();
 
+			frameNumber = ++frameNumber % 2;
 			firstFrame = false;
 		}
 
@@ -203,6 +221,14 @@ namespace Graphics
 
 		vkDestroyPipeline(device, pipeline, nullptr);
 		vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+
+		for (int i{ 0 }; i < 2; ++i)
+		{
+			vkDestroySemaphore(device, frames[i].presentSemaphore, nullptr);
+			vkDestroySemaphore(device, frames[i].renderSemaphore, nullptr);
+			vkDestroyFence(device, frames[i].renderFence, nullptr);
+			vkDestroyCommandPool(device, frames[i].cmdPool, nullptr);
+		}
 
 		vkDestroySemaphore(device, presentSemaphore, nullptr);
 		vkDestroySemaphore(device, renderSemaphore, nullptr);

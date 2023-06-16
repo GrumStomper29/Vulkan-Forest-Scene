@@ -7,11 +7,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "TinyObj/tiny_obj_loader.h"
 
-//#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
-//#include <iterator>
 #include <string>
 #include <string_view>
 #include <unordered_map>

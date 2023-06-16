@@ -1,6 +1,3 @@
--Index Buffers
--Vertex de-deuplication
-
 Descriptor sets:
 Bindless
 
