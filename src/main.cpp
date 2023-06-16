@@ -39,7 +39,7 @@ namespace Graphics
 
 	void run()
 	{
-		constexpr VkExtent2D    windowExtent                    { 640, 480 };
+		constexpr VkExtent2D    windowExtent                    { 800, 460 };
 		const char*             windowTitle                     { "Vulkan Forest Scene" };
 		constexpr int           preferredSwapchainImageCount    { 4 };
 		constexpr VkFormat      swapchainImageFormat            { VK_FORMAT_B8G8R8A8_SRGB };
@@ -77,11 +77,21 @@ namespace Graphics
 
 		std::vector<Vertex>        vertices{};
 		std::vector<std::uint32_t> indices{};
+		std::vector<std::uint32_t> indices2{};
 		loadOBJToVertices("assets/American Elm01 tree.obj", vertices, indices);
+		loadOBJToVertices("assets/monkey.obj", vertices, indices2);
+
+		std::cout << vertices.size() << '\n';
 
 		const std::uint32_t vertexCount{ static_cast<std::uint32_t>(vertices.size()) };
+		const std::uint32_t indexCount { static_cast<std::uint32_t>(indices.size()) };
+		const std::uint32_t indexCount2{ static_cast<std::uint32_t>(indices2.size()) };
 
 		Buffer vertexBuffer{ createVertexBuffer(vertices, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
+		Buffer indexBuffer { createIndexBuffer(indices, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
+		Buffer indexBuffer2{ createIndexBuffer(indices2, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
+
+		bool firstFrame{ true };
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -90,9 +100,13 @@ namespace Graphics
 			vkResetCommandBuffer(mainCmdBuffer, 0);
 
 			beginCommandBuffer(mainCmdBuffer, true);
-			
+
 			prepareImageForColorAttachmentOutput(mainCmdBuffer, swapchainImages[swapchainImageIndex]);
-			correctDepthImageLayout(depthImage.image, mainCmdBuffer);
+
+			if (firstFrame)
+			{
+				correctDepthImageLayout(depthImage.image, mainCmdBuffer);
+			}
 
 			VkRenderingAttachmentInfo colorAttachment
 			{
@@ -116,7 +130,7 @@ namespace Graphics
 				.resolveMode{ VK_RESOLVE_MODE_NONE },
 				.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
 				.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
-				.clearValue{ .depthStencil{ .depth{ 1.0f } } },
+				.clearValue{.depthStencil{.depth{ 1.0f } } },
 			};
 
 			VkRenderingInfo renderingInfo
@@ -141,6 +155,8 @@ namespace Graphics
 			constexpr VkDeviceSize offset{ 0 };
 			vkCmdBindVertexBuffers(mainCmdBuffer, 0, 1, &vertexBuffer.buffer, &offset);
 
+			vkCmdBindIndexBuffer(mainCmdBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
 			static std::uint64_t frame{ 0 };
 			constexpr glm::vec3 camPos{ 0.0f, 1.0f, -3.0f };
 			glm::mat4 view{ glm::translate(glm::mat4(1.0f), camPos) };
@@ -152,7 +168,15 @@ namespace Graphics
 			PushConstants pushConstants{ proj * view * model };
 			vkCmdPushConstants(mainCmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
 
-			vkCmdDraw(mainCmdBuffer, vertexCount, 1, 0, 0);
+			vkCmdDrawIndexed(mainCmdBuffer, indexCount, 1, 0, 0, 0);
+
+			vkCmdBindIndexBuffer(mainCmdBuffer, indexBuffer2.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+			model = glm::scale(model, glm::vec3{ 500.0f, 500.0f, 500.0f });
+			pushConstants.vertexTransform = proj * view * model;
+			vkCmdPushConstants(mainCmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
+
+			vkCmdDrawIndexed(mainCmdBuffer, indexCount2, 1, 0, 0, 0);
 
 			vkCmdEndRendering(mainCmdBuffer);
 
@@ -169,8 +193,12 @@ namespace Graphics
 			vkResetFences(device, 1, &fence);
 
 			glfwPollEvents();
+
+			firstFrame = false;
 		}
 
+		vmaDestroyBuffer(allocator, indexBuffer2.buffer, indexBuffer2.alloc);
+		vmaDestroyBuffer(allocator, indexBuffer.buffer, indexBuffer.alloc);
 		vmaDestroyBuffer(allocator, vertexBuffer.buffer, vertexBuffer.alloc);
 
 		vkDestroyPipeline(device, pipeline, nullptr);

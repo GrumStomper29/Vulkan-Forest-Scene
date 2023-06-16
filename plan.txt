@@ -1,0 +1,12 @@
+-Index Buffers
+-Vertex de-deuplication
+
+Descriptor sets:
+Bindless
+
+What do I need to pass to the shaders?
+
+-vertex transform data
+
+-textures
+-lighting data
