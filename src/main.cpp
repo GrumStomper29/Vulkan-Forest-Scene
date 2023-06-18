@@ -11,6 +11,8 @@
 
 #include "mesh.hpp"
 
+#include "camera.hpp"
+
 #include "volk/volk.h"
 #include "GLFW/glfw3.h"
 #include "VMA/vk_mem_alloc.h"
@@ -18,6 +20,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <iostream>
 #include <vector>
@@ -44,6 +47,7 @@ namespace Graphics
 		const char*             windowTitle                     { "Vulkan Forest Scene" };
 		constexpr int           preferredSwapchainImageCount    { 4 };
 		constexpr VkFormat      swapchainImageFormat            { VK_FORMAT_B8G8R8A8_SRGB };
+		
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -67,31 +71,22 @@ namespace Graphics
 		Image                       depthImage          { createDepthImage(allocator, windowExtent) };
 		VkImageView                 depthImageView      { createDepthImageView(device, depthImage.image) };
 
-		VkCommandPool				cmdPool				{ createCommandPool(device, graphicsQueueFamily, true) };
-		VkCommandBuffer				mainCmdBuffer		{ allocateCommandBuffer(device, cmdPool) };
-		VkFence						fence				{ createFence(device, false) };
-		VkSemaphore					renderSemaphore		{ createSemaphore(device) };
-		VkSemaphore					presentSemaphore	{ createSemaphore(device) };
+		VkCommandPool				GPCmdPool           { createCommandPool(device, graphicsQueueFamily, true) };
+		VkCommandBuffer				GPCmdBuffer         { allocateCommandBuffer(device, GPCmdPool) };
+		VkFence						GPFence             { createFence(device, false) };
 
-		Frame frames[2]{};
-		frames[0] =
-		{
-			.renderSemaphore{ createSemaphore(device) },
-			.presentSemaphore{ createSemaphore(device) },
-			.renderFence{ createFence(device, false) },
-			.cmdPool{ createCommandPool(device, graphicsQueueFamily, true) },
-		};
-		frames[0].cmdBuffer = allocateCommandBuffer(device, frames[0].cmdPool);
-		frames[1] =
-		{
-			.renderSemaphore{ createSemaphore(device) },
-			.presentSemaphore{ createSemaphore(device) },
-			.renderFence{ createFence(device, false) },
-			.cmdPool{ createCommandPool(device, graphicsQueueFamily, true) },
-		};
-		frames[1].cmdBuffer = allocateCommandBuffer(device, frames[1].cmdPool);
+		std::vector<Frame> framesInFlight{};
+		framesInFlight.reserve(2);
+		framesInFlight.push_back({ device, allocator, graphicsQueueFamily });
+		framesInFlight.push_back({ device, allocator, graphicsQueueFamily });
 
-		VkPipelineLayout            pipelineLayout      { createPipelineLayout(device) };
+		VkDescriptorSetLayout setLayouts[2]
+		{
+			framesInFlight[0].getDescriptorSetLayout(),
+			framesInFlight[1].getDescriptorSetLayout()
+		};
+
+		VkPipelineLayout            pipelineLayout      { createPipelineLayout(device, setLayouts) };
 		VkPipeline                  pipeline            { createPipeline(device, pipelineLayout, windowExtent, swapchainImageFormat) };
 
 		std::vector<Vertex>        vertices{};
@@ -100,114 +95,64 @@ namespace Graphics
 		loadOBJToVertices("assets/American Elm01 tree.obj", vertices, indices);
 		loadOBJToVertices("assets/monkey.obj", vertices, indices2);
 
-		const std::uint32_t vertexCount{ static_cast<std::uint32_t>(vertices.size()) };
-		const std::uint32_t indexCount { static_cast<std::uint32_t>(indices.size()) };
-		const std::uint32_t indexCount2{ static_cast<std::uint32_t>(indices2.size()) };
+		std::vector<Renderable> renderables(2);
+		renderables[0].indexCount = static_cast<std::uint32_t>(indices.size());
+		renderables[1].indexCount = static_cast<std::uint32_t>(indices2.size());
 
-		Buffer vertexBuffer{ createVertexBuffer(vertices, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
-		Buffer indexBuffer { createIndexBuffer(indices, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
-		Buffer indexBuffer2{ createIndexBuffer(indices2, device, allocator, graphicsQueue, mainCmdBuffer, fence) };
+		Buffer vertexBuffer{ createVertexBuffer(vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence) };
+		renderables[0].indexBuffer = createIndexBuffer(indices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence);
+		renderables[1].indexBuffer = createIndexBuffer(indices2, device, allocator, graphicsQueue, GPCmdBuffer, GPFence);
+
+		Camera camera{ {0.0f, -3.0f, -10.0f }, { 0.0f, -90.0f } };
 
 		int frameNumber{ 0 };
 		bool firstFrame{ true };
 
+		float lastFrame{ 0.0f };
+		float deltaTime{ 0.0f };
+
+		const glm::mat4 proj{ glm::perspective(glm::radians(90.0f), static_cast<float>(windowExtent.width) / windowExtent.height, 0.1f, 200.0f) };
+
 		while (!glfwWindowShouldClose(window))
 		{
-			std::uint32_t swapchainImageIndex{ acquireNextSwapchainImage(device, swapchain, frames[frameNumber].presentSemaphore) };
+			float current{ static_cast<float>(glfwGetTime()) };
+			deltaTime = current - lastFrame;
+			lastFrame = current;
 
-			vkResetCommandPool(device, frames[frameNumber].cmdPool, 0);
+			float camMoveSpeed{ 6.0f * deltaTime };
+			float camRotateSpeed{ 100.0f * deltaTime };
 
-			beginCommandBuffer(frames[frameNumber].cmdBuffer, true);
+			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.move(0.0f, 0.0f, -camMoveSpeed);
+			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.move(0.0f, 0.0f, camMoveSpeed);
+			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.move(-camMoveSpeed, 0.0f, 0.0f);
+			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.move(camMoveSpeed, 0.0f, 0.0f);
+			if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) camera.move(0.0f, -camMoveSpeed, 0.0f);
+			if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) camera.move(0.0f, camMoveSpeed, 0.0f);
 
-			prepareImageForColorAttachmentOutput(frames[frameNumber].cmdBuffer, swapchainImages[swapchainImageIndex]);
+			if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)    camera.rotate(camRotateSpeed, 0.0f);
+			if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)  camera.rotate(-camRotateSpeed, 0.0f);
+			if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)  camera.rotate(0.0f, -camRotateSpeed);
+			if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) camera.rotate(0.0f, camRotateSpeed);
 
-			if (firstFrame)
+			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 			{
-				correctDepthImageLayout(depthImage.image, frames[frameNumber].cmdBuffer);
+				std::cout << camera.rotation().y << '\n';
 			}
 
-			VkRenderingAttachmentInfo colorAttachment
-			{
-				.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
-				.imageView{ swapchainImageViews[swapchainImageIndex] },
-				.imageLayout{ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-				.resolveMode{ VK_RESOLVE_MODE_NONE },
-				.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
-				.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
-				.clearValue
-				{
-					.color{ 0.6f, 0.0f, 0.9f, 1.0f },
-				},
-			};
+			glm::mat4 model{ 1.0f };
+			model = glm::scale(model, glm::vec3{ 0.01f });
 
-			VkRenderingAttachmentInfo depthAttachment
-			{
-				.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
-				.imageView{ depthImageView },
-				.imageLayout{ VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL },
-				.resolveMode{ VK_RESOLVE_MODE_NONE },
-				.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
-				.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
-				.clearValue{ .depthStencil{ .depth{ 1.0f } } },
-			};
+			PushConstants pushConstants{ .vertexTransform{ model } };
+			CameraUBOData ubo{ .viewProj{ proj * camera.getViewMatrix() }};
 
-			VkRenderingInfo renderingInfo
-			{
-				.sType{ VK_STRUCTURE_TYPE_RENDERING_INFO },
-				.renderArea
-				{
-					.offset{ 0, 0 },
-					.extent{ windowExtent },
-				},
-				.layerCount{ 1 },
-				.viewMask{ 0 },
-				.colorAttachmentCount{ 1 },
-				.pColorAttachments{ &colorAttachment },
-				.pDepthAttachment{ &depthAttachment },
-			};
+			std::memcpy(framesInFlight[frameNumber].cameraUBOData, &ubo, sizeof(CameraUBOData));
 
-			vkCmdBeginRendering(frames[frameNumber].cmdBuffer, &renderingInfo);
-
-			vkCmdBindPipeline(frames[frameNumber].cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-			constexpr VkDeviceSize offset{ 0 };
-			vkCmdBindVertexBuffers(frames[frameNumber].cmdBuffer, 0, 1, &vertexBuffer.buffer, &offset);
-
-			vkCmdBindIndexBuffer(frames[frameNumber].cmdBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-			static std::uint64_t frame{ 0 };
-			constexpr glm::vec3 camPos{ 0.0f, 1.0f, -3.0f };
-			glm::mat4 view{ glm::translate(glm::mat4(1.0f), camPos) };
-			constexpr float ar{ windowExtent.width / windowExtent.height };
-			glm::mat4 proj{ glm::perspective(glm::radians(70.0f), ar, 0.1f, 200.0f) };
-			glm::mat4 model{ glm::rotate(glm::mat4{ 1.0f }, glm::radians(frame++ * 0.04f), glm::vec3{ 0.0f, 1.0f, 0.0f }) };
-			model = glm::scale(model, glm::vec3{ 0.001f });
-
-			PushConstants pushConstants{ proj * view * model };
-			vkCmdPushConstants(frames[frameNumber].cmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
-
-			vkCmdDrawIndexed(frames[frameNumber].cmdBuffer, indexCount, 1, 0, 0, 0);
-
-			vkCmdBindIndexBuffer(frames[frameNumber].cmdBuffer, indexBuffer2.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-			model = glm::scale(model, glm::vec3{ 500.0f, 500.0f, 500.0f });
-			pushConstants.vertexTransform = proj * view * model;
-			vkCmdPushConstants(frames[frameNumber].cmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
-
-			vkCmdDrawIndexed(frames[frameNumber].cmdBuffer, indexCount2, 1, 0, 0, 0);
-
-			vkCmdEndRendering(frames[frameNumber].cmdBuffer);
-
-			prepareImageForPresentation(frames[frameNumber].cmdBuffer, swapchainImages[swapchainImageIndex]);
-
-			vkEndCommandBuffer(frames[frameNumber].cmdBuffer);
-
-			queueSubmit(graphicsQueue, frames[frameNumber].cmdBuffer, frames[frameNumber].presentSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, frames[frameNumber].renderSemaphore, frames[frameNumber].renderFence);
-
-			swapchainQueuePresent(graphicsQueue, swapchain, frames[frameNumber].renderSemaphore, swapchainImageIndex);
-
-			vkWaitForFences(device, 1, &frames[frameNumber].renderFence, VK_TRUE, secondsToNanoseconds(1));
-			vkResetFences(device, 1, &frames[frameNumber].renderFence);
+			framesInFlight[frameNumber].execute(graphicsQueue, swapchain, windowExtent,
+				swapchainImages, swapchainImageViews,
+				depthImage, depthImageView,
+				firstFrame, pipeline, pipelineLayout,
+				vertexBuffer, renderables,
+				pushConstants);
 
 			glfwPollEvents();
 
@@ -215,25 +160,22 @@ namespace Graphics
 			firstFrame = false;
 		}
 
-		vmaDestroyBuffer(allocator, indexBuffer2.buffer, indexBuffer2.alloc);
-		vmaDestroyBuffer(allocator, indexBuffer.buffer, indexBuffer.alloc);
+		vkDeviceWaitIdle(device);
+
+		for (const auto& r : renderables)
+		{
+			vmaDestroyBuffer(allocator, r.indexBuffer.buffer, r.indexBuffer.alloc);
+		}
+
 		vmaDestroyBuffer(allocator, vertexBuffer.buffer, vertexBuffer.alloc);
 
 		vkDestroyPipeline(device, pipeline, nullptr);
 		vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
-		for (int i{ 0 }; i < 2; ++i)
-		{
-			vkDestroySemaphore(device, frames[i].presentSemaphore, nullptr);
-			vkDestroySemaphore(device, frames[i].renderSemaphore, nullptr);
-			vkDestroyFence(device, frames[i].renderFence, nullptr);
-			vkDestroyCommandPool(device, frames[i].cmdPool, nullptr);
-		}
+		framesInFlight.clear();
 
-		vkDestroySemaphore(device, presentSemaphore, nullptr);
-		vkDestroySemaphore(device, renderSemaphore, nullptr);
-		vkDestroyFence(device, fence, nullptr);
-		vkDestroyCommandPool(device, cmdPool, nullptr);
+		vkDestroyFence(device, GPFence, nullptr);
+		vkDestroyCommandPool(device, GPCmdPool, nullptr);
 
 		vkDestroyImageView(device, depthImageView, nullptr);
 		vmaDestroyImage(allocator, depthImage.image, depthImage.alloc);

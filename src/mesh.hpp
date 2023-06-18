@@ -31,6 +31,12 @@ namespace Graphics
 		}
 	};
 
+	struct Renderable
+	{
+		Buffer        indexBuffer{};
+		std::uint32_t indexCount{};
+	};
+
 	void loadOBJToVertices(std::string_view path, std::vector<Vertex>& vertices, std::vector<std::uint32_t>& indices);
 
 	Buffer createVertexBuffer(std::vector<Vertex>& vertices, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);

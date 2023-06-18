@@ -1,5 +1,6 @@
 #include "pipeline.hpp"
 
+#include "frame.hpp"
 #include "mesh.hpp"
 
 #include "volk/volk.h"
@@ -46,7 +47,7 @@ namespace Graphics
 		return module;
 	}
 
-	VkPipelineLayout createPipelineLayout(VkDevice device)
+	VkPipelineLayout createPipelineLayout(VkDevice device, VkDescriptorSetLayout* descriptorSetLayouts)
 	{
 		VkPushConstantRange range
 		{
@@ -58,6 +59,8 @@ namespace Graphics
 		VkPipelineLayoutCreateInfo layoutCI
 		{
 			.sType{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO },
+			.setLayoutCount{ 2 },
+			.pSetLayouts{ descriptorSetLayouts },
 			.pushConstantRangeCount{ 1 },
 			.pPushConstantRanges{ &range },
 		};

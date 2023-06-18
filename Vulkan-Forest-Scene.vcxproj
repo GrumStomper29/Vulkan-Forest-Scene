@@ -149,6 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\alloc.cpp" />
+    <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\cmd_buffer.cpp" />
     <ClCompile Include="src\device.cpp" />
     <ClCompile Include="src\frame.cpp" />
@@ -162,6 +163,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\alloc.hpp" />
+    <ClInclude Include="src\camera.hpp" />
     <ClInclude Include="src\cmd_buffer.hpp" />
     <ClInclude Include="src\device.hpp" />
     <ClInclude Include="src\frame.hpp" />
