@@ -93,9 +93,10 @@ namespace Graphics
 		for (auto& m : renderObjects[0].meshes)
 		{
 			m.textureIndex = textures.size();
-			textures.push_back({ m.diffusePath.c_str(), device, allocator, graphicsQueue, GPCmdBuffer, GPFence});
+			textures.push_back({ m.diffusePath.c_str(), device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
 		}
 
+		// Todo: get this all out of main.cpp
 		VkDescriptorPoolSize poolSize{
 			.type{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
 			.descriptorCount{ 1024 },
@@ -207,6 +208,8 @@ namespace Graphics
 			glm::mat4 model{ 1.0f };
 			model = glm::scale(model, glm::vec3{ 0.01f });
 			renderObjects[0].transform = model;
+
+			renderObjects[0].meshes[1].draw = false;
 
 			CameraUBOData ubo{ .viewProj{ proj * camera.getViewMatrix() }};
 

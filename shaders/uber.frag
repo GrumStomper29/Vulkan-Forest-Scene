@@ -19,5 +19,11 @@ layout (set = 1, binding = 0) uniform sampler2D textures[];
 void main()
 {
 	outColor = texture(textures[pushConstants.textureIndex], inTex);
+	
+	if (outColor.a < 0.0f)
+	{
+		discard;
+	}
+
 	//outColor = vec4(inTex.x, inTex.y, 0.0f, 1.0f);
 }

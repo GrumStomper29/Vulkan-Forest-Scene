@@ -11,6 +11,7 @@
 #include "stb/stb_image.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -149,8 +150,7 @@ namespace Graphics
 		return buffer;
 	}
 
-	// Can be optimized to put the texture in better memory; same with meshes
-	Image loadImage(const char* path, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence)
+	Image loadImage(const char* path, std::uint32_t& mipLevels, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence)
 	{
 		int width{};
 		int height{};
@@ -160,6 +160,8 @@ namespace Graphics
 		{
 			std::cerr << "failed to load texture at path: " << path << '\n';
 		}
+
+		mipLevels = std::floor(std::log2(std::max(width, height))) + 1u;
 
 		VkDeviceSize imageSize   { static_cast<VkDeviceSize>(width * height * 4) };
 		VkFormat     imageFormat { VK_FORMAT_R8G8B8A8_SRGB };
@@ -192,11 +194,11 @@ namespace Graphics
 			.imageType{ VK_IMAGE_TYPE_2D },
 			.format{ imageFormat },
 			.extent{ .width{ static_cast<std::uint32_t>(width) }, .height{ static_cast<std::uint32_t>(height) }, .depth{ 1u } },
-			.mipLevels{ 1 },
+			.mipLevels{ mipLevels },
 			.arrayLayers{ 1 },
 			.samples{ VK_SAMPLE_COUNT_1_BIT },
 			.tiling{ VK_IMAGE_TILING_OPTIMAL },
-			.usage{ VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
+			.usage{ VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT },
 			.initialLayout{ VK_IMAGE_LAYOUT_UNDEFINED },
 		};
 		VmaAllocationCreateInfo allocCI
@@ -214,7 +216,7 @@ namespace Graphics
 		{
 			.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
 			.baseMipLevel{ 0 },
-			.levelCount{ 1 },
+			.levelCount{ mipLevels },
 			.baseArrayLayer{ 0 },
 			.layerCount{ 1 },
 		};
@@ -243,14 +245,76 @@ namespace Graphics
 		VkImageMemoryBarrier imageBarrier2
 		{
 			.sType{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER },
-			.srcAccessMask{ VK_ACCESS_TRANSFER_WRITE_BIT },
-			.dstAccessMask{ VK_ACCESS_NONE },
-			.oldLayout{ VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL },
-			.newLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 			.image{ image.image },
-			.subresourceRange{ subresourceRange },
+			.subresourceRange
+			{
+				.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
+				.levelCount{ 1 },
+				.baseArrayLayer{ 0 },
+				.layerCount{ 1 },
+			},
 		};
-		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+
+		std::int32_t mipWidth{ width };
+		std::int32_t mipHeight{ height };
+
+		for (int i{ 1 }; i < mipLevels; ++i)
+		{
+			imageBarrier2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier2.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			imageBarrier2.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier2.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			imageBarrier2.subresourceRange.baseMipLevel = i - 1;
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0, 0, nullptr, 0, nullptr, 1, &imageBarrier2);
+
+			VkImageBlit blit
+			{
+				.srcSubresource
+				{
+					.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
+					.mipLevel{ i - 1u },
+					.baseArrayLayer{ 0 },
+					.layerCount{ 1 },
+				},
+				.srcOffsets{ { 0, 0, 0 }, { mipWidth, mipHeight, 1 } },
+				.dstSubresource
+				{
+					.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
+					.mipLevel{ static_cast<std::uint32_t>(i) },
+					.baseArrayLayer{ 0 },
+					.layerCount{ 1 },
+				},
+				.dstOffsets{ { 0, 0, 0 }, { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 } },
+			};
+			vkCmdBlitImage(commandBuffer, 
+				image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
+				image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &blit, VK_FILTER_LINEAR);
+
+			imageBarrier2.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			imageBarrier2.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			imageBarrier2.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			imageBarrier2.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				0, 0, nullptr, 0, nullptr, 1, &imageBarrier2);
+
+			if (mipWidth > 1)
+			{
+				mipWidth /= 2;
+			}
+			if (mipHeight > 1)
+			{
+				mipHeight /= 2;
+			}
+		}
+
+		imageBarrier2.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageBarrier2.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		imageBarrier2.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		imageBarrier2.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageBarrier2.subresourceRange.baseMipLevel = mipLevels - 1;
+		vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			0, 0, nullptr, 0, nullptr, 1, &imageBarrier2);
 
 		vkEndCommandBuffer(commandBuffer);
@@ -326,14 +390,12 @@ namespace Graphics
 					newVertex.color.b = attrib.colors[3 * index.vertex_index + 2];
 
 					int material{ shapes[s].mesh.material_ids[f] };
-					/*
-					if (map.count(newVertex) == 0)
-					{
-						map[newVertex] = static_cast<std::uint32_t>(vertices.size());
-						vertices.push_back(newVertex);
-					}
-					indices.push_back(map[newVertex]);
-					*/
+
+					auto addToMesh{ [](std::vector<Mesh>::iterator m, const Vertex& v) 
+						{
+							
+						} };
+
 					std::vector<Mesh>::iterator result{};
 					if (meshes.size() != 0)
 					{
@@ -351,19 +413,20 @@ namespace Graphics
 					{
 						meshes.push_back(Mesh{
 							.material{ material },
-							.indices{ static_cast<std::uint32_t>(vertices.size()) },
 							.diffusePath{ "assets/" + materials[material].diffuse_texname },
 							});
+						meshes.back().indices.push_back(meshes.back().map[newVertex]);
 						vertices.push_back(newVertex);
 					}
 					else
 					{
-						result->indices.push_back(static_cast<std::uint32_t>(vertices.size()));
-						vertices.push_back(newVertex);
+						if (result->map.count(newVertex) == 0)
+						{
+							result->map[newVertex] = static_cast<std::uint32_t>(vertices.size());
+							vertices.push_back(newVertex);
+						}
+						result->indices.push_back(result->map[newVertex]);
 					}
-
-					//vertices.push_back(newVertex);
-					//indices.push_back(static_cast<std::uint32_t>(vertices.size()) - 1);
 				}
 
 				indexOffset += fv;
@@ -374,6 +437,8 @@ namespace Graphics
 		{
 			m.indexCount = m.indices.size();
 			m.indexBuffer = createIndexBuffer(m.indices, device, allocator, queue, commandBuffer, fence);
+			// Standard doesn't seem to have a way of freeing memory used by unordered_map without destruction. smh
+			m.map = {};
 		}
 	}
 
@@ -418,7 +483,7 @@ namespace Graphics
 		: m_device{ device },
 		  m_allocator{ allocator }
 	{
-		m_image = loadImage(path, device, allocator, queue, commandBuffer, fence);
+		m_image = loadImage(path, m_mipLevels, device, allocator, queue, commandBuffer, fence);
 
 		VkImageViewCreateInfo imageViewCI
 		{
@@ -430,7 +495,7 @@ namespace Graphics
 			{
 				.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
 				.baseMipLevel{ 0 },
-				.levelCount{ 1 },
+				.levelCount{ m_mipLevels },
 				.baseArrayLayer{ 0 },
 				.layerCount{ 1 },
 			}
@@ -440,11 +505,14 @@ namespace Graphics
 		VkSamplerCreateInfo samplerCI
 		{
 			.sType{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO },
-			.magFilter{ VK_FILTER_NEAREST },
+			.magFilter{ VK_FILTER_LINEAR },
 			.minFilter{ VK_FILTER_LINEAR },
-			.mipmapMode{ VK_SAMPLER_MIPMAP_MODE_NEAREST },
+			.mipmapMode{ VK_SAMPLER_MIPMAP_MODE_LINEAR },
 			.addressModeU{ VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT },
 			.addressModeV{ VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT },
+			.minLod{ 0.0f },
+			.maxLod{ static_cast<float>(m_mipLevels) },
+
 		};
 		vkCreateSampler(device, &samplerCI, nullptr, &m_sampler);
 	}

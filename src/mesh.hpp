@@ -14,6 +14,7 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace Graphics
@@ -32,23 +33,52 @@ namespace Graphics
 		}
 	};
 
+}
+
+template<>
+struct std::hash<Graphics::Vertex>
+{
+	size_t operator()(const Graphics::Vertex& v) const noexcept
+	{
+		size_t h1{ hash<glm::vec3>{}(v.pos) };
+		size_t h2{ hash<glm::vec3>{}(v.norm) };
+		size_t h3{ hash<glm::vec3>{}(v.color) };
+		size_t h4{ hash<glm::vec2>{}(v.tex) };
+
+		constexpr std::uint64_t multiplier{ 6364136223846793005 };
+		constexpr std::uint64_t increment{ 1442695040888963407 };
+
+		size_t finalHash{ h1 };
+		finalHash = finalHash ^ (h2 * multiplier + increment);
+		finalHash = finalHash ^ (h3 * multiplier + increment);
+		finalHash = finalHash ^ (h4 * multiplier + increment);
+
+		return finalHash;
+	}
+};
+
+namespace Graphics
+{
+
 	Buffer createVertexBuffer(std::vector<Vertex>& vertices, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
 
 	Buffer createIndexBuffer(std::vector<std::uint32_t>& indices, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
 
-	Image loadImage(const char* path, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
+	Image loadImage(const char* path, std::uint32_t& mipLevels, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
 
 	class RenderObject
 	{
 	public:
 		struct Mesh
 		{
-			int                        material{};
-			std::vector<std::uint32_t> indices{};
-			std::string                diffusePath{};
-			Buffer                     indexBuffer{};
-			std::uint32_t              indexCount{};
-			std::uint32_t              textureIndex{};
+			int                                       material{};
+			std::vector<std::uint32_t>                indices{};
+			std::string                               diffusePath{};
+			Buffer                                    indexBuffer{};
+			std::uint32_t                             indexCount{};
+			std::uint32_t                             textureIndex{};
+			bool                                      draw{ true };
+			std::unordered_map<Vertex, std::uint32_t> map{};
 		};
 
 		RenderObject(const char* path, std::vector<Vertex>& vertices, VkDevice device, 
@@ -95,9 +125,10 @@ namespace Graphics
 		}
 
 	private:
-		Image       m_image{};
-		VkImageView m_imageView{};
-		VkSampler   m_sampler{};
+		std::uint32_t m_mipLevels{};
+		Image         m_image{};
+		VkImageView   m_imageView{};
+		VkSampler     m_sampler{};
 
 		// Not owned by class
 		VkDevice     m_device{};
@@ -108,25 +139,3 @@ namespace Graphics
 	};
 
 }
-
-template<>
-struct std::hash<Graphics::Vertex>
-{
-	size_t operator()(const Graphics::Vertex& v) const noexcept
-	{
-		size_t h1{ hash<glm::vec3>{}(v.pos) };
-		size_t h2{ hash<glm::vec3>{}(v.norm) };
-		size_t h3{ hash<glm::vec3>{}(v.color) };
-		size_t h4{ hash<glm::vec2>{}(v.tex) };
-
-		constexpr std::uint64_t multiplier{ 6364136223846793005 };
-		constexpr std::uint64_t increment{ 1442695040888963407 };
-
-		size_t finalHash{ h1 };
-		finalHash = finalHash ^ (h2 * multiplier + increment);
-		finalHash = finalHash ^ (h3 * multiplier + increment);
-		finalHash = finalHash ^ (h4 * multiplier + increment);
-
-		return finalHash;
-	}
-};

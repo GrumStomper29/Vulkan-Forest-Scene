@@ -204,11 +204,14 @@ namespace Graphics
 		{
 			for (const auto& mesh : renderable.meshes)
 			{
-				PushConstants pushConstants{ renderable.transform, mesh.textureIndex };
-				vkCmdPushConstants(m_cmdBuffer, pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
+				if (mesh.draw)
+				{
+					PushConstants pushConstants{ renderable.transform, mesh.textureIndex };
+					vkCmdPushConstants(m_cmdBuffer, pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
 
-				vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-				vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
+					vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+					vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
+				}
 			}
 		}
 
