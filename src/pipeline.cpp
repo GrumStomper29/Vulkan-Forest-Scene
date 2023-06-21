@@ -47,11 +47,11 @@ namespace Graphics
 		return module;
 	}
 
-	VkPipelineLayout createPipelineLayout(VkDevice device, VkDescriptorSetLayout* descriptorSetLayouts)
+	VkPipelineLayout createPipelineLayout(VkDevice device, std::uint32_t layoutCount, VkDescriptorSetLayout* descriptorSetLayouts)
 	{
 		VkPushConstantRange range
 		{
-			.stageFlags{ VK_SHADER_STAGE_VERTEX_BIT },
+			.stageFlags{ VK_SHADER_STAGE_ALL_GRAPHICS },
 			.offset{ 0 },
 			.size{ sizeof(PushConstants) }
 		};
@@ -59,7 +59,7 @@ namespace Graphics
 		VkPipelineLayoutCreateInfo layoutCI
 		{
 			.sType{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO },
-			.setLayoutCount{ 2 },
+			.setLayoutCount{ layoutCount },
 			.pSetLayouts{ descriptorSetLayouts },
 			.pushConstantRangeCount{ 1 },
 			.pPushConstantRanges{ &range },
@@ -136,7 +136,7 @@ namespace Graphics
 			.location{ 3 },
 			.binding{ 0 },
 			.format{ VK_FORMAT_R32G32_SFLOAT },
-			.offset{ offsetof(Vertex, Vertex::norm) },
+			.offset{ offsetof(Vertex, Vertex::tex) },
 		};
 
 		VkPipelineVertexInputStateCreateInfo vertexInputState
@@ -145,7 +145,7 @@ namespace Graphics
 			.vertexBindingDescriptionCount{ 1 },
 			.pVertexBindingDescriptions{ &binding },
 			.vertexAttributeDescriptionCount{ 4 },
-			.pVertexAttributeDescriptions{ &attribs[0] },
+			.pVertexAttributeDescriptions{ attribs },
 		};
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyState
@@ -186,8 +186,8 @@ namespace Graphics
 			.depthClampEnable{ VK_FALSE },
 			.rasterizerDiscardEnable{ VK_FALSE },
 			.polygonMode{ VK_POLYGON_MODE_FILL },
-			.cullMode{ VK_CULL_MODE_NONE }, // No culling for now
-			//.frontFace{ VK_FRONT_FACE_CLOCKWISE },
+			.cullMode{ VK_CULL_MODE_NONE },
+			.frontFace{ VK_FRONT_FACE_CLOCKWISE },
 			.depthBiasEnable{ VK_FALSE },
 			.lineWidth{ 1.0f },
 		};

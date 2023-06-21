@@ -9,11 +9,19 @@ namespace Graphics
 {
 
 	VkDevice createDevice(VkPhysicalDevice physicalDevice, std::uint32_t graphicsQueueFamily, VkQueue& graphicsQueue)
-	{
+	{ 
 		VkPhysicalDeviceVulkan13Features vulkan13Features
 		{
 			.sType{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES },
 			.dynamicRendering{ VK_TRUE },
+		};
+		VkPhysicalDeviceVulkan12Features vulkan12Features
+		{
+			.sType{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES },
+			.pNext{ &vulkan13Features },
+			.descriptorIndexing{ VK_TRUE },
+			.descriptorBindingPartiallyBound{ VK_TRUE },
+			.runtimeDescriptorArray{ VK_TRUE },
 		};
 
 		constexpr float graphicsQueuePriority{ 1.0f };
@@ -33,7 +41,7 @@ namespace Graphics
 		VkDeviceCreateInfo deviceCI
 		{
 			.sType{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO },
-			.pNext{ &vulkan13Features },
+			.pNext{ &vulkan12Features },
 			.queueCreateInfoCount{ 1 },
 			.pQueueCreateInfos{ &graphicsQueueCI },
 			.enabledExtensionCount{ static_cast<std::uint32_t>(extensions.size()) },

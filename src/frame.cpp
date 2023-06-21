@@ -17,6 +17,31 @@
 namespace Graphics
 {
 
+	VkDescriptorSetLayout Frame::m_descriptorSetLayout{};
+
+	void Frame::init(VkDevice device)
+	{
+		VkDescriptorSetLayoutBinding setLayoutBinding
+		{
+			.binding{ 0 },
+			.descriptorType{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+			.descriptorCount{ 1 },
+			.stageFlags{ VK_SHADER_STAGE_VERTEX_BIT },
+		};
+		VkDescriptorSetLayoutCreateInfo setLayoutCI
+		{
+			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO },
+			.bindingCount{ 1 },
+			.pBindings{ &setLayoutBinding },
+		};
+		vkCreateDescriptorSetLayout(device, &setLayoutCI, nullptr, &m_descriptorSetLayout);
+	}
+
+	void Frame::cleanup(VkDevice device)
+	{
+		vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
+	}
+
 	Frame::Frame(VkDevice device, VmaAllocator allocator, std::uint32_t queueFamily)
 		: m_device{ device },
 		  m_allocator{ allocator }
@@ -57,21 +82,6 @@ namespace Graphics
 			.pPoolSizes{ &size },
 		};
 		vkCreateDescriptorPool(device, &poolCI, nullptr, &m_descriptorPool);
-
-		VkDescriptorSetLayoutBinding setLayoutBinding
-		{
-			.binding{ 0 },
-			.descriptorType{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-			.descriptorCount{ 1 },
-			.stageFlags{ VK_SHADER_STAGE_VERTEX_BIT },
-		};
-		VkDescriptorSetLayoutCreateInfo setLayoutCI
-		{
-			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO },
-			.bindingCount{ 1 },
-			.pBindings{ &setLayoutBinding },
-		};
-		vkCreateDescriptorSetLayout(device, &setLayoutCI, nullptr, &m_descriptorSetLayout);
 
 		VkDescriptorSetAllocateInfo setAllocInfo
 		{
@@ -119,7 +129,7 @@ namespace Graphics
 		destroyObjects();
 	}
 
-	void Frame::execute(VkQueue queue, VkSwapchainKHR swapchain, VkExtent2D windowExtent, const std::vector<VkImage>& swapchainImages, const std::vector<VkImageView>& swapchainImageViews, const Image& depthImage, VkImageView depthImageView, bool firstFrame, VkPipeline pipeline, VkPipelineLayout pipelineLayout, const Buffer& vertexBuffer, const std::vector<Renderable>& renderables, PushConstants pushConstants)
+	void Frame::execute(VkQueue queue, VkSwapchainKHR swapchain, VkExtent2D windowExtent, const std::vector<VkImage>& swapchainImages, const std::vector<VkImageView>& swapchainImageViews, const Image& depthImage, VkImageView depthImageView, bool firstFrame, VkPipeline pipeline, VkPipelineLayout pipelineLayout, const Buffer& vertexBuffer, const std::vector<RenderObject>& renderables, VkDescriptorSet descriptorSet)
 	{
 		vkWaitForFences(m_device, 1, &m_renderFence, VK_TRUE, secondsToNanoseconds(1));
 		vkResetFences(m_device, 1, &m_renderFence);
@@ -146,7 +156,7 @@ namespace Graphics
 			.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
 			.clearValue
 			{
-				.color{ 0.6f, 0.0f, 0.9f, 1.0f },
+				.color{ 0.01f, 0.01f, 0.01f, 1.0f },
 			},
 		};
 
@@ -180,16 +190,26 @@ namespace Graphics
 
 		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-		vkCmdPushConstants(m_cmdBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &pushConstants);
-		vkCmdBindDescriptorSets(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &m_descriptorSet, 0, nullptr);
+		VkDescriptorSet descriptorSets[2]
+		{
+			m_descriptorSet,
+			descriptorSet
+		};
+		vkCmdBindDescriptorSets(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 2, descriptorSets, 0, nullptr);
 
 		constexpr VkDeviceSize offset{ 0 };
 		vkCmdBindVertexBuffers(m_cmdBuffer, 0, 1, &vertexBuffer.buffer, &offset);
 
 		for (const auto& renderable : renderables)
 		{
-			vkCmdBindIndexBuffer(m_cmdBuffer, renderable.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(m_cmdBuffer, renderable.indexCount, 1, 0, 0, 0);
+			for (const auto& mesh : renderable.meshes)
+			{
+				PushConstants pushConstants{ renderable.transform, mesh.textureIndex };
+				vkCmdPushConstants(m_cmdBuffer, pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
+
+				vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
+			}
 		}
 
 		vkCmdEndRendering(m_cmdBuffer);
@@ -207,7 +227,6 @@ namespace Graphics
 	{
 		if (m_device != VK_NULL_HANDLE)
 		{
-			vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
 			vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
 
 			vmaDestroyBuffer(m_allocator, m_cameraUBO.buffer, m_cameraUBO.alloc);
@@ -227,27 +246,17 @@ namespace Graphics
 		m_allocator = f.m_allocator;
 
 		m_cmdPool = f.m_cmdPool;
-		f.m_cmdPool = VK_NULL_HANDLE;
 		m_cmdBuffer = f.m_cmdBuffer;
-		f.m_cmdBuffer = VK_NULL_HANDLE;
 
 		m_renderSemaphore = f.m_renderSemaphore;
-		f.m_renderSemaphore = VK_NULL_HANDLE;
 		m_presentSemaphore = f.m_presentSemaphore;
-		f.m_presentSemaphore = VK_NULL_HANDLE;
 		m_renderFence = f.m_renderFence;
-		f.m_renderFence = VK_NULL_HANDLE;
 
 		m_cameraUBO = f.m_cameraUBO;
-		f.m_cameraUBO = {};
 		cameraUBOData = f.cameraUBOData;
 
 		m_descriptorPool = f.m_descriptorPool;
-		f.m_descriptorPool = VK_NULL_HANDLE;
-		m_descriptorSetLayout = f.m_descriptorSetLayout;
-		f.m_descriptorSetLayout = VK_NULL_HANDLE;
 		m_descriptorSet = f.m_descriptorSet;
-		f.m_descriptorSet = VK_NULL_HANDLE;
 	}
 
 }

@@ -21,11 +21,15 @@ namespace Graphics
 	struct PushConstants
 	{
 		glm::mat4 vertexTransform{};
+		std::uint32_t textureIndex{};
 	};
 
 	class Frame
 	{
 	public:
+		static void init(VkDevice device);
+		static void cleanup(VkDevice device);
+
 		Frame(VkDevice device, VmaAllocator allocator, std::uint32_t queueFamily);
 
 		Frame(Frame&& f) noexcept;
@@ -36,7 +40,7 @@ namespace Graphics
 
 		~Frame();
 
-		void execute(VkQueue queue, VkSwapchainKHR swapchain, VkExtent2D windowExtent, const std::vector<VkImage>& swapchainImages, const std::vector<VkImageView>& swapchainImageViews, const Image& depthImage, VkImageView depthImageView, bool firstFrame, VkPipeline pipeline, VkPipelineLayout pipelineLayout, const Buffer& vertexBuffer, const std::vector<Renderable>& renderables, PushConstants pushConstants);
+		void execute(VkQueue queue, VkSwapchainKHR swapchain, VkExtent2D windowExtent, const std::vector<VkImage>& swapchainImages, const std::vector<VkImageView>& swapchainImageViews, const Image& depthImage, VkImageView depthImageView, bool firstFrame, VkPipeline pipeline, VkPipelineLayout pipelineLayout, const Buffer& vertexBuffer, const std::vector<RenderObject>& renderables, VkDescriptorSet descriptorSet);
 
 		void* cameraUBOData{};
 
@@ -56,7 +60,7 @@ namespace Graphics
 		Buffer m_cameraUBO{};
 
 		VkDescriptorPool      m_descriptorPool{};
-		VkDescriptorSetLayout m_descriptorSetLayout{};
+		static VkDescriptorSetLayout m_descriptorSetLayout;
 		VkDescriptorSet       m_descriptorSet{};
 
 		// The class does not actually own these objects.

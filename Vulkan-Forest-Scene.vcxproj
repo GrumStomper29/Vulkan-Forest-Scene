@@ -106,6 +106,29 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>glslc shaders/uber.vert -o shaders/uber.vert.spv
+glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Compiling shaders</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -118,6 +141,29 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>glslc shaders/uber.vert -o shaders/uber.vert.spv
+glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Compiling shaders</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -132,6 +178,29 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>glslc shaders/uber.vert -o shaders/uber.vert.spv
+glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Compiling shaders</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -146,6 +215,29 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>GLFW/glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>glslc shaders/uber.vert -o shaders/uber.vert.spv
+glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Compiling shaders</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\alloc.cpp" />

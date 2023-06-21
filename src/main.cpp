@@ -43,11 +43,11 @@ namespace Graphics
 
 	void run()
 	{
-		constexpr VkExtent2D    windowExtent                    { 800, 460 };
-		const char*             windowTitle                     { "Vulkan Forest Scene" };
-		constexpr int           preferredSwapchainImageCount    { 4 };
-		constexpr VkFormat      swapchainImageFormat            { VK_FORMAT_B8G8R8A8_SRGB };
-		
+		constexpr VkExtent2D    windowExtent{ 1600, 900 };
+		const char* windowTitle{ "Vulkan Forest Scene" };
+		constexpr int           preferredSwapchainImageCount{ 4 };
+		constexpr VkFormat      swapchainImageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -57,51 +57,121 @@ namespace Graphics
 			throw std::exception{ "failed to create window" };
 		}
 
-		VkInstance                  instance            { createInstance(true) };
-		VkPhysicalDevice            physicalDevice      { getPhysicalDevice(instance) };
+		VkInstance                  instance{ createInstance(true) };
+		VkPhysicalDevice            physicalDevice{ getPhysicalDevice(instance) };
 		std::uint32_t               graphicsQueueFamily { getGraphicsQueueFamily(physicalDevice) };
 		VkQueue                     graphicsQueue{};
-		VkDevice                    device              { createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
-		VmaAllocator                allocator           { createAllocator(instance, physicalDevice, device) };
+		VkDevice                    device{ createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
+		VmaAllocator                allocator{ createAllocator(instance, physicalDevice, device) };
 		VkSurfaceKHR                surface{};
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
-		VkSwapchainKHR              swapchain           { createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
+		VkSwapchainKHR              swapchain{ createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
 		std::vector<VkImage>        swapchainImages     { getSwapchainImages(device, swapchain) };
 		std::vector<VkImageView>    swapchainImageViews { createSwapchainImageViews(device, swapchainImages, swapchainImageFormat) };
-		Image                       depthImage          { createDepthImage(allocator, windowExtent) };
-		VkImageView                 depthImageView      { createDepthImageView(device, depthImage.image) };
+		Image                       depthImage{ createDepthImage(allocator, windowExtent) };
+		VkImageView                 depthImageView{ createDepthImageView(device, depthImage.image) };
 
-		VkCommandPool				GPCmdPool           { createCommandPool(device, graphicsQueueFamily, true) };
-		VkCommandBuffer				GPCmdBuffer         { allocateCommandBuffer(device, GPCmdPool) };
-		VkFence						GPFence             { createFence(device, false) };
+		VkCommandPool				GPCmdPool{ createCommandPool(device, graphicsQueueFamily, true) };
+		VkCommandBuffer				GPCmdBuffer{ allocateCommandBuffer(device, GPCmdPool) };
+		VkFence						GPFence{ createFence(device, false) };
 
+		Frame::init(device);
 		std::vector<Frame> framesInFlight{};
 		framesInFlight.reserve(2);
 		framesInFlight.push_back({ device, allocator, graphicsQueueFamily });
 		framesInFlight.push_back({ device, allocator, graphicsQueueFamily });
 
-		VkDescriptorSetLayout setLayouts[2]
-		{
-			framesInFlight[0].getDescriptorSetLayout(),
-			framesInFlight[1].getDescriptorSetLayout()
-		};
-
-		VkPipelineLayout            pipelineLayout      { createPipelineLayout(device, setLayouts) };
-		VkPipeline                  pipeline            { createPipeline(device, pipelineLayout, windowExtent, swapchainImageFormat) };
-
 		std::vector<Vertex>        vertices{};
-		std::vector<std::uint32_t> indices{};
-		std::vector<std::uint32_t> indices2{};
-		loadOBJToVertices("assets/American Elm01 tree.obj", vertices, indices);
-		loadOBJToVertices("assets/monkey.obj", vertices, indices2);
 
-		std::vector<Renderable> renderables(2);
-		renderables[0].indexCount = static_cast<std::uint32_t>(indices.size());
-		renderables[1].indexCount = static_cast<std::uint32_t>(indices2.size());
+		std::vector<RenderObject> renderObjects{};
+		renderObjects.reserve(1);
+		renderObjects.push_back({ "assets/American Elm01 tree.obj", vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
 
 		Buffer vertexBuffer{ createVertexBuffer(vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence) };
-		renderables[0].indexBuffer = createIndexBuffer(indices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence);
-		renderables[1].indexBuffer = createIndexBuffer(indices2, device, allocator, graphicsQueue, GPCmdBuffer, GPFence);
+
+		std::vector<Texture> textures{};
+		for (auto& m : renderObjects[0].meshes)
+		{
+			m.textureIndex = textures.size();
+			textures.push_back({ m.diffusePath.c_str(), device, allocator, graphicsQueue, GPCmdBuffer, GPFence});
+		}
+
+		VkDescriptorPoolSize poolSize{
+			.type{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+			.descriptorCount{ 1024 },
+		};
+		VkDescriptorPoolCreateInfo poolCI
+		{
+			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO },
+			.maxSets{ 1 },
+			.poolSizeCount{ 1 },
+			.pPoolSizes{ &poolSize },
+		};
+		VkDescriptorPool descriptorPool{};
+		vkCreateDescriptorPool(device, &poolCI, nullptr, &descriptorPool);
+
+		VkDescriptorBindingFlags flag{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT };
+		VkDescriptorSetLayoutBindingFlagsCreateInfo flag_info = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+		flag_info.bindingCount = 1;
+		flag_info.pBindingFlags = &flag;
+		VkDescriptorSetLayoutBinding binding
+		{
+			.binding{ 0 },
+			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+			.descriptorCount{ 1024 },
+			.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
+		};
+		VkDescriptorSetLayoutCreateInfo layoutCI
+		{
+			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO },
+			.pNext{ &flag_info },
+			.bindingCount{ 1 },
+			.pBindings{ &binding },
+		};
+		VkDescriptorSetLayout descriptorSetLayout{};
+		vkCreateDescriptorSetLayout(device, &layoutCI, nullptr, &descriptorSetLayout);
+
+		VkDescriptorSetAllocateInfo allocInfo
+		{
+			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO },
+			.descriptorPool{ descriptorPool },
+			.descriptorSetCount{ 1 },
+			.pSetLayouts{ &descriptorSetLayout },
+		};
+		VkDescriptorSet descriptorSet{};
+		vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+
+		std::vector<VkDescriptorImageInfo> imageInfos(textures.size());
+		std::vector<VkWriteDescriptorSet> writes(textures.size());
+		for (int i{ 0 }; i < textures.size(); ++i)
+		{
+			imageInfos[i] =
+			{
+				.sampler{ textures[i].vkSampler() },
+				.imageView{ textures[i].vkImageView() },
+				.imageLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			};
+			writes[i] =
+			{
+				.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+				.dstSet{ descriptorSet },
+				.dstBinding{ 0 },
+				.dstArrayElement{ static_cast<std::uint32_t>(i) },
+				.descriptorCount{ 1 },
+				.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+				.pImageInfo{ &imageInfos[i] },
+			};
+		}
+		vkUpdateDescriptorSets(device, writes.size(), writes.data(), 0, nullptr);
+
+		VkDescriptorSetLayout setLayouts[2]
+		{
+			// This should probably be a static function since they each have the same layout
+			framesInFlight[0].getDescriptorSetLayout(),
+			descriptorSetLayout
+		};
+		VkPipelineLayout            pipelineLayout{ createPipelineLayout(device, 2, setLayouts) };
+		VkPipeline                  pipeline{ createPipeline(device, pipelineLayout, windowExtent, swapchainImageFormat) };
 
 		Camera camera{ {0.0f, -3.0f, -10.0f }, { 0.0f, -90.0f } };
 
@@ -134,15 +204,10 @@ namespace Graphics
 			if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)  camera.rotate(0.0f, -camRotateSpeed);
 			if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) camera.rotate(0.0f, camRotateSpeed);
 
-			if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-			{
-				std::cout << camera.rotation().y << '\n';
-			}
-
 			glm::mat4 model{ 1.0f };
 			model = glm::scale(model, glm::vec3{ 0.01f });
+			renderObjects[0].transform = model;
 
-			PushConstants pushConstants{ .vertexTransform{ model } };
 			CameraUBOData ubo{ .viewProj{ proj * camera.getViewMatrix() }};
 
 			std::memcpy(framesInFlight[frameNumber].cameraUBOData, &ubo, sizeof(CameraUBOData));
@@ -151,8 +216,7 @@ namespace Graphics
 				swapchainImages, swapchainImageViews,
 				depthImage, depthImageView,
 				firstFrame, pipeline, pipelineLayout,
-				vertexBuffer, renderables,
-				pushConstants);
+				vertexBuffer, renderObjects, descriptorSet);
 
 			glfwPollEvents();
 
@@ -162,10 +226,11 @@ namespace Graphics
 
 		vkDeviceWaitIdle(device);
 
-		for (const auto& r : renderables)
-		{
-			vmaDestroyBuffer(allocator, r.indexBuffer.buffer, r.indexBuffer.alloc);
-		}
+		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
+		textures.clear();
+		renderObjects.clear();
 
 		vmaDestroyBuffer(allocator, vertexBuffer.buffer, vertexBuffer.alloc);
 
@@ -173,6 +238,7 @@ namespace Graphics
 		vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
 		framesInFlight.clear();
+		Frame::cleanup(device);
 
 		vkDestroyFence(device, GPFence, nullptr);
 		vkDestroyCommandPool(device, GPCmdPool, nullptr);

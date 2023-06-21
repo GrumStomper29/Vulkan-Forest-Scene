@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -31,17 +32,80 @@ namespace Graphics
 		}
 	};
 
-	struct Renderable
-	{
-		Buffer        indexBuffer{};
-		std::uint32_t indexCount{};
-	};
-
-	void loadOBJToVertices(std::string_view path, std::vector<Vertex>& vertices, std::vector<std::uint32_t>& indices);
-
 	Buffer createVertexBuffer(std::vector<Vertex>& vertices, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
 
 	Buffer createIndexBuffer(std::vector<std::uint32_t>& indices, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
+
+	Image loadImage(const char* path, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
+
+	class RenderObject
+	{
+	public:
+		struct Mesh
+		{
+			int                        material{};
+			std::vector<std::uint32_t> indices{};
+			std::string                diffusePath{};
+			Buffer                     indexBuffer{};
+			std::uint32_t              indexCount{};
+			std::uint32_t              textureIndex{};
+		};
+
+		RenderObject(const char* path, std::vector<Vertex>& vertices, VkDevice device, 
+			VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
+
+		RenderObject(const RenderObject&) = delete;
+		RenderObject& operator=(const RenderObject&) = delete;
+
+		RenderObject(RenderObject&& r) noexcept;
+		RenderObject& operator=(RenderObject&& r) noexcept;
+
+		~RenderObject();
+
+		std::vector<Mesh> meshes{};
+		glm::mat4         transform{ 1.0f };
+	private:
+		// Not owned by the class
+		VmaAllocator m_allocator{};
+
+		void move(RenderObject&& r);
+		void destroy();
+	};
+
+	class Texture
+	{
+	public:
+		Texture(const char* path, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
+
+		Texture(const Texture&) = delete;
+		Texture& operator=(const Texture&) = delete;
+
+		Texture(Texture&& t);
+		Texture& operator=(Texture&& t);
+
+		~Texture();
+
+		VkImageView vkImageView() const
+		{
+			return m_imageView;
+		}
+		VkSampler vkSampler() const
+		{
+			return m_sampler;
+		}
+
+	private:
+		Image       m_image{};
+		VkImageView m_imageView{};
+		VkSampler   m_sampler{};
+
+		// Not owned by class
+		VkDevice     m_device{};
+		VmaAllocator m_allocator{};
+
+		void move(Texture&& t);
+		void destroy();
+	};
 
 }
 
