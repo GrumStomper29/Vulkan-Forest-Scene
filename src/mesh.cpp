@@ -352,10 +352,6 @@ namespace Graphics
 		auto& shapes{ reader.GetShapes() };
 		auto& materials{ reader.GetMaterials() };
 
-		//std::unordered_map<Vertex, std::uint32_t> map{};
-
-		std::uint32_t startVert{ static_cast<std::uint32_t>(vertices.size()) };
-
 		for (std::size_t s{ 0 }; s < shapes.size(); ++s)
 		{
 			std::size_t indexOffset{ 0 };
@@ -391,11 +387,6 @@ namespace Graphics
 
 					int material{ shapes[s].mesh.material_ids[f] };
 
-					auto addToMesh{ [](std::vector<Mesh>::iterator m, const Vertex& v) 
-						{
-							
-						} };
-
 					std::vector<Mesh>::iterator result{};
 					if (meshes.size() != 0)
 					{
@@ -403,6 +394,7 @@ namespace Graphics
 							[=](const Mesh& m) {
 								return material == m.material;
 							});
+						
 					}
 					else
 					{
@@ -415,7 +407,8 @@ namespace Graphics
 							.material{ material },
 							.diffusePath{ "assets/" + materials[material].diffuse_texname },
 							});
-						meshes.back().indices.push_back(meshes.back().map[newVertex]);
+						meshes.back().map[newVertex] = static_cast<std::uint32_t>(vertices.size());
+						meshes.back().indices.push_back(static_cast<std::uint32_t>(vertices.size()));
 						vertices.push_back(newVertex);
 					}
 					else

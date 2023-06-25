@@ -44,7 +44,7 @@ namespace Graphics
 
 		void* cameraUBOData{};
 
-		VkDescriptorSetLayout getDescriptorSetLayout() const
+		static VkDescriptorSetLayout getDescriptorSetLayout()
 		{
 			return m_descriptorSetLayout;
 		}

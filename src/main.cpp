@@ -5,11 +5,14 @@
 
 #include "cmd_buffer.hpp"
 #include "sync.hpp"
+
 #include "frame.hpp"
 
-#include "pipeline.hpp"
+#include "descriptor.hpp"
 
 #include "mesh.hpp"
+
+#include "pipeline.hpp"
 
 #include "camera.hpp"
 
@@ -19,8 +22,8 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-#include <cstdint>
-#include <cstring>
+#include <cstdint>   // For std::memcpy
+#include <cstring>   // For std::uint32_t
 #include <exception>
 #include <iostream>
 #include <vector>
@@ -44,7 +47,7 @@ namespace Graphics
 	void run()
 	{
 		constexpr VkExtent2D    windowExtent{ 1600, 900 };
-		const char* windowTitle{ "Vulkan Forest Scene" };
+		const char*             windowTitle{ "Vulkan Forest Scene" };
 		constexpr int           preferredSwapchainImageCount{ 4 };
 		constexpr VkFormat      swapchainImageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
 
@@ -57,23 +60,23 @@ namespace Graphics
 			throw std::exception{ "failed to create window" };
 		}
 
-		VkInstance                  instance{ createInstance(true) };
-		VkPhysicalDevice            physicalDevice{ getPhysicalDevice(instance) };
+		VkInstance                  instance            { createInstance(true) };
+		VkPhysicalDevice            physicalDevice      { getPhysicalDevice(instance) };
 		std::uint32_t               graphicsQueueFamily { getGraphicsQueueFamily(physicalDevice) };
 		VkQueue                     graphicsQueue{};
-		VkDevice                    device{ createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
-		VmaAllocator                allocator{ createAllocator(instance, physicalDevice, device) };
+		VkDevice                    device              { createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
+		VmaAllocator                allocator           { createAllocator(instance, physicalDevice, device) };
 		VkSurfaceKHR                surface{};
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
-		VkSwapchainKHR              swapchain{ createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
+		VkSwapchainKHR              swapchain           { createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
 		std::vector<VkImage>        swapchainImages     { getSwapchainImages(device, swapchain) };
 		std::vector<VkImageView>    swapchainImageViews { createSwapchainImageViews(device, swapchainImages, swapchainImageFormat) };
-		Image                       depthImage{ createDepthImage(allocator, windowExtent) };
-		VkImageView                 depthImageView{ createDepthImageView(device, depthImage.image) };
+		Image                       depthImage          { createDepthImage(allocator, windowExtent) };
+		VkImageView                 depthImageView      { createDepthImageView(device, depthImage.image) };
 
-		VkCommandPool				GPCmdPool{ createCommandPool(device, graphicsQueueFamily, true) };
-		VkCommandBuffer				GPCmdBuffer{ allocateCommandBuffer(device, GPCmdPool) };
-		VkFence						GPFence{ createFence(device, false) };
+		VkCommandPool   GPCmdPool   { createCommandPool(device, graphicsQueueFamily, true) };
+		VkCommandBuffer GPCmdBuffer { allocateCommandBuffer(device, GPCmdPool) };
+		VkFence         GPFence     { createFence(device, false) };
 
 		Frame::init(device);
 		std::vector<Frame> framesInFlight{};
@@ -81,66 +84,28 @@ namespace Graphics
 		framesInFlight.push_back({ device, allocator, graphicsQueueFamily });
 		framesInFlight.push_back({ device, allocator, graphicsQueueFamily });
 
-		std::vector<Vertex>        vertices{};
+		std::vector<Vertex> vertices{};
 
 		std::vector<RenderObject> renderObjects{};
-		renderObjects.reserve(1);
+		renderObjects.reserve(2);
 		renderObjects.push_back({ "assets/American Elm01 tree.obj", vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+		renderObjects.push_back({ "assets/forest.obj", vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
 
 		Buffer vertexBuffer{ createVertexBuffer(vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence) };
 
 		std::vector<Texture> textures{};
-		for (auto& m : renderObjects[0].meshes)
+		for (auto& r : renderObjects)
 		{
-			m.textureIndex = textures.size();
-			textures.push_back({ m.diffusePath.c_str(), device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+			for (auto& m : r.meshes)
+			{
+				m.textureIndex = textures.size();
+				textures.push_back({ m.diffusePath.c_str(), device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+			}
 		}
 
-		// Todo: get this all out of main.cpp
-		VkDescriptorPoolSize poolSize{
-			.type{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
-			.descriptorCount{ 1024 },
-		};
-		VkDescriptorPoolCreateInfo poolCI
-		{
-			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO },
-			.maxSets{ 1 },
-			.poolSizeCount{ 1 },
-			.pPoolSizes{ &poolSize },
-		};
-		VkDescriptorPool descriptorPool{};
-		vkCreateDescriptorPool(device, &poolCI, nullptr, &descriptorPool);
-
-		VkDescriptorBindingFlags flag{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT };
-		VkDescriptorSetLayoutBindingFlagsCreateInfo flag_info = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
-		flag_info.bindingCount = 1;
-		flag_info.pBindingFlags = &flag;
-		VkDescriptorSetLayoutBinding binding
-		{
-			.binding{ 0 },
-			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
-			.descriptorCount{ 1024 },
-			.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
-		};
-		VkDescriptorSetLayoutCreateInfo layoutCI
-		{
-			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO },
-			.pNext{ &flag_info },
-			.bindingCount{ 1 },
-			.pBindings{ &binding },
-		};
-		VkDescriptorSetLayout descriptorSetLayout{};
-		vkCreateDescriptorSetLayout(device, &layoutCI, nullptr, &descriptorSetLayout);
-
-		VkDescriptorSetAllocateInfo allocInfo
-		{
-			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO },
-			.descriptorPool{ descriptorPool },
-			.descriptorSetCount{ 1 },
-			.pSetLayouts{ &descriptorSetLayout },
-		};
-		VkDescriptorSet descriptorSet{};
-		vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+		VkDescriptorPool descriptorPool           { createDescriptorPool(device) };
+		VkDescriptorSetLayout descriptorSetLayout { createDescriptorSetLayout(device) };
+		VkDescriptorSet descriptorSet             { allocateDescriptorSet( device,  descriptorPool,  descriptorSetLayout) };
 
 		std::vector<VkDescriptorImageInfo> imageInfos(textures.size());
 		std::vector<VkWriteDescriptorSet> writes(textures.size());
@@ -167,8 +132,7 @@ namespace Graphics
 
 		VkDescriptorSetLayout setLayouts[2]
 		{
-			// This should probably be a static function since they each have the same layout
-			framesInFlight[0].getDescriptorSetLayout(),
+			Frame::getDescriptorSetLayout(),
 			descriptorSetLayout
 		};
 		VkPipelineLayout            pipelineLayout{ createPipelineLayout(device, 2, setLayouts) };
@@ -182,7 +146,7 @@ namespace Graphics
 		float lastFrame{ 0.0f };
 		float deltaTime{ 0.0f };
 
-		const glm::mat4 proj{ glm::perspective(glm::radians(90.0f), static_cast<float>(windowExtent.width) / windowExtent.height, 0.1f, 200.0f) };
+		const glm::mat4 proj{ glm::perspective(glm::radians(90.0f), static_cast<float>(windowExtent.width) / windowExtent.height, 0.1f, 20000.0f) };
 
 		while (!glfwWindowShouldClose(window))
 		{
@@ -192,6 +156,8 @@ namespace Graphics
 
 			float camMoveSpeed{ 6.0f * deltaTime };
 			float camRotateSpeed{ 100.0f * deltaTime };
+
+			if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) camMoveSpeed *= 100.0f;
 
 			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.move(0.0f, 0.0f, -camMoveSpeed);
 			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.move(0.0f, 0.0f, camMoveSpeed);
@@ -207,9 +173,13 @@ namespace Graphics
 
 			glm::mat4 model{ 1.0f };
 			model = glm::scale(model, glm::vec3{ 0.01f });
+			model = glm::translate(model, { 0.0f, -150.0f, 0.0f });
 			renderObjects[0].transform = model;
-
 			renderObjects[0].meshes[1].draw = false;
+
+			model = glm::mat4{ 1.0f };
+			model = glm::scale(model, glm::vec3{ 7.5f });
+			renderObjects[1].transform = model;
 
 			CameraUBOData ubo{ .viewProj{ proj * camera.getViewMatrix() }};
 
