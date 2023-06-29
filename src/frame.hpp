@@ -24,6 +24,24 @@ namespace Graphics
 		std::uint32_t textureIndex{};
 	};
 
+	struct RenderInfo
+	{
+		VkQueue queue{};
+		VkSwapchainKHR swapchain{};
+		VkExtent2D windowExtent{};
+		const std::vector<VkImage>& swapchainImages{};
+		const std::vector<VkImageView>& swapchainImageViews{};
+		const Image& depthImage{};
+		VkImageView depthImageView{};
+		bool firstFrame{};
+		VkPipeline pipeline{};
+		VkPipelineLayout pipelineLayout{};
+		const Buffer& vertexBuffer{};
+		const std::vector<RenderObject>& renderObjects{};
+		const std::vector<RenderObjectInstance>& renderObjectInstances{};
+		VkDescriptorSet descriptorSet{};
+	};
+
 	class Frame
 	{
 	public:
@@ -40,7 +58,8 @@ namespace Graphics
 
 		~Frame();
 
-		void execute(VkQueue queue, VkSwapchainKHR swapchain, VkExtent2D windowExtent, const std::vector<VkImage>& swapchainImages, const std::vector<VkImageView>& swapchainImageViews, const Image& depthImage, VkImageView depthImageView, bool firstFrame, VkPipeline pipeline, VkPipelineLayout pipelineLayout, const Buffer& vertexBuffer, const std::vector<RenderObject>& renderables, VkDescriptorSet descriptorSet);
+		void waitFrame();
+		void execute(const RenderInfo& renderInfo);
 
 		void* cameraUBOData{};
 

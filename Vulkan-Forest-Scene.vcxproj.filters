@@ -16,6 +16,9 @@
     <Filter Include="Source Files\third_parties">
       <UniqueIdentifier>{6ad56ab0-a6e6-4bc6-bb39-94e4b24f6f6a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\shaders">
+      <UniqueIdentifier>{420b8018-553b-489a-be02-14d5545657d5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -92,5 +95,13 @@
     <ClInclude Include="src\descriptor.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\uber.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\uber.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

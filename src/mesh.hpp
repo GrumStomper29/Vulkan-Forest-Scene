@@ -66,6 +66,12 @@ namespace Graphics
 
 	Image loadImage(const char* path, std::uint32_t& mipLevels, VkDevice device, VmaAllocator allocator, VkQueue queue, VkCommandBuffer commandBuffer, VkFence fence);
 
+	struct RenderObjectInstance
+	{
+		int       renderObject{};
+		glm::mat4 transform{ 1.0f };
+	};
+
 	class RenderObject
 	{
 	public:
@@ -93,7 +99,6 @@ namespace Graphics
 		~RenderObject();
 
 		std::vector<Mesh> meshes{};
-		glm::mat4         transform{ 1.0f };
 	private:
 		// Not owned by the class
 		VmaAllocator m_allocator{};

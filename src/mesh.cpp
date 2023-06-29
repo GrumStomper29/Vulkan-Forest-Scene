@@ -126,7 +126,7 @@ namespace Graphics
 		VmaAllocationCreateInfo allocCI
 		{
 			.usage{ VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE },
-			.preferredFlags{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT } // Can you even do this?
+			.requiredFlags{ VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT }
 		};
 
 		Buffer buffer{};
@@ -386,6 +386,10 @@ namespace Graphics
 					newVertex.color.b = attrib.colors[3 * index.vertex_index + 2];
 
 					int material{ shapes[s].mesh.material_ids[f] };
+					
+					newVertex.color.r = materials[material].diffuse[0];
+					newVertex.color.g = materials[material].diffuse[1];
+					newVertex.color.b = materials[material].diffuse[2];
 
 					std::vector<Mesh>::iterator result{};
 					if (meshes.size() != 0)
@@ -394,7 +398,6 @@ namespace Graphics
 							[=](const Mesh& m) {
 								return material == m.material;
 							});
-						
 					}
 					else
 					{
@@ -405,7 +408,7 @@ namespace Graphics
 					{
 						meshes.push_back(Mesh{
 							.material{ material },
-							.diffusePath{ "assets/" + materials[material].diffuse_texname },
+							.diffusePath{ materials[material].diffuse_texname },
 							});
 						meshes.back().map[newVertex] = static_cast<std::uint32_t>(vertices.size());
 						meshes.back().indices.push_back(static_cast<std::uint32_t>(vertices.size()));
@@ -455,7 +458,6 @@ namespace Graphics
 	void RenderObject::move(RenderObject&& r)
 	{
 		meshes = std::move(r.meshes);
-		transform = r.transform;
 
 		m_allocator = r.m_allocator;
 		r.m_allocator = {};

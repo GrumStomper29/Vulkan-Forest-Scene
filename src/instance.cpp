@@ -44,7 +44,7 @@ namespace Graphics
 			.enabledExtensionCount{ static_cast<std::uint32_t>(extensions.size()) },
 			.ppEnabledExtensionNames{ extensions.data() },
 		};
-
+		
 		VkInstance instance{};
 		vkCreateInstance(&instanceCI, nullptr, &instance);
 		

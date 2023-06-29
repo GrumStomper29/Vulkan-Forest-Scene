@@ -51,7 +51,7 @@ namespace Graphics
 		{
 			.binding{ 0 },
 			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
-			.descriptorCount{ 1024 },
+			.descriptorCount{ 1000 },
 			.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
 		};
 

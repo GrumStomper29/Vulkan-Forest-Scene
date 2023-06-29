@@ -47,10 +47,9 @@ namespace Graphics
 	void run()
 	{
 		constexpr VkExtent2D    windowExtent{ 1600, 900 };
-		const char*             windowTitle{ "Vulkan Forest Scene" };
+		const char* windowTitle{ "Vulkan Forest Scene" };
 		constexpr int           preferredSwapchainImageCount{ 4 };
 		constexpr VkFormat      swapchainImageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
-
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -60,23 +59,28 @@ namespace Graphics
 			throw std::exception{ "failed to create window" };
 		}
 
-		VkInstance                  instance            { createInstance(true) };
-		VkPhysicalDevice            physicalDevice      { getPhysicalDevice(instance) };
+		VkInstance                  instance{ createInstance(true) };
+		VkPhysicalDevice            physicalDevice{ getPhysicalDevice(instance) };
+
+		VkPhysicalDeviceProperties properties{};
+		vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+		VkDeviceSize uboAlignment{ properties.limits.minUniformBufferOffsetAlignment };
+
 		std::uint32_t               graphicsQueueFamily { getGraphicsQueueFamily(physicalDevice) };
 		VkQueue                     graphicsQueue{};
-		VkDevice                    device              { createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
-		VmaAllocator                allocator           { createAllocator(instance, physicalDevice, device) };
+		VkDevice                    device{ createDevice(physicalDevice, graphicsQueueFamily, graphicsQueue) };
+		VmaAllocator                allocator{ createAllocator(instance, physicalDevice, device) };
 		VkSurfaceKHR                surface{};
 		glfwCreateWindowSurface(instance, window, nullptr, &surface);
-		VkSwapchainKHR              swapchain           { createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
+		VkSwapchainKHR              swapchain{ createSwapchain(device, surface, preferredSwapchainImageCount, swapchainImageFormat, windowExtent) };
 		std::vector<VkImage>        swapchainImages     { getSwapchainImages(device, swapchain) };
 		std::vector<VkImageView>    swapchainImageViews { createSwapchainImageViews(device, swapchainImages, swapchainImageFormat) };
-		Image                       depthImage          { createDepthImage(allocator, windowExtent) };
-		VkImageView                 depthImageView      { createDepthImageView(device, depthImage.image) };
+		Image                       depthImage{ createDepthImage(allocator, windowExtent) };
+		VkImageView                 depthImageView{ createDepthImageView(device, depthImage.image) };
 
-		VkCommandPool   GPCmdPool   { createCommandPool(device, graphicsQueueFamily, true) };
-		VkCommandBuffer GPCmdBuffer { allocateCommandBuffer(device, GPCmdPool) };
-		VkFence         GPFence     { createFence(device, false) };
+		VkCommandPool   GPCmdPool{ createCommandPool(device, graphicsQueueFamily, true) };
+		VkCommandBuffer GPCmdBuffer{ allocateCommandBuffer(device, GPCmdPool) };
+		VkFence         GPFence{ createFence(device, false) };
 
 		Frame::init(device);
 		std::vector<Frame> framesInFlight{};
@@ -88,8 +92,26 @@ namespace Graphics
 
 		std::vector<RenderObject> renderObjects{};
 		renderObjects.reserve(2);
-		renderObjects.push_back({ "assets/American Elm01 tree.obj", vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
-		renderObjects.push_back({ "assets/forest.obj", vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+		renderObjects.push_back({ "assets/field/field.obj", vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+		renderObjects.push_back({ "assets/tree/tree.obj", vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+
+		std::vector<RenderObjectInstance> renderObjectInstances
+		{
+			RenderObjectInstance{ .renderObject{ 0 } },
+		};
+		
+		renderObjectInstances[0].transform = glm::scale(renderObjectInstances[0].transform, glm::vec3{ 1.0f });
+		renderObjectInstances[0].transform = glm::translate(renderObjectInstances[0].transform, glm::vec3{ 0.0f, 100.0f, 400.0f });
+
+		for (float i{ -4.0f }; i < 5.0f; ++i)
+		{
+			renderObjectInstances.push_back({ .renderObject{ 1 } });
+
+			glm::mat4 transform{ 1.0f };
+			transform = glm::scale(transform, glm::vec3{ 7.0f, 7.0f, 7.0f });
+			transform = glm::translate(transform, glm::vec3{ i * 5.0f, 0.0f, 0.0f });
+			renderObjectInstances.back().transform = transform;
+		}
 
 		Buffer vertexBuffer{ createVertexBuffer(vertices, device, allocator, graphicsQueue, GPCmdBuffer, GPFence) };
 
@@ -98,8 +120,18 @@ namespace Graphics
 		{
 			for (auto& m : r.meshes)
 			{
-				m.textureIndex = textures.size();
-				textures.push_back({ m.diffusePath.c_str(), device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+				if (!m.diffusePath.empty())
+				{
+					m.textureIndex = textures.size();
+					std::string path{ "assets/" + m.diffusePath };
+					textures.push_back({ path.c_str(), device, allocator, graphicsQueue, GPCmdBuffer, GPFence });
+				}
+				else
+				{
+					// Magic number. Since there can only be 1000 textures, texture index 1001
+					// means that there is no texture.
+					m.textureIndex = 1001;
+				}
 			}
 		}
 
@@ -171,25 +203,31 @@ namespace Graphics
 			if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)  camera.rotate(0.0f, -camRotateSpeed);
 			if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) camera.rotate(0.0f, camRotateSpeed);
 
-			glm::mat4 model{ 1.0f };
-			model = glm::scale(model, glm::vec3{ 0.01f });
-			model = glm::translate(model, { 0.0f, -150.0f, 0.0f });
-			renderObjects[0].transform = model;
-			renderObjects[0].meshes[1].draw = false;
-
-			model = glm::mat4{ 1.0f };
-			model = glm::scale(model, glm::vec3{ 7.5f });
-			renderObjects[1].transform = model;
-
 			CameraUBOData ubo{ .viewProj{ proj * camera.getViewMatrix() }};
+
+			framesInFlight[frameNumber].waitFrame();
 
 			std::memcpy(framesInFlight[frameNumber].cameraUBOData, &ubo, sizeof(CameraUBOData));
 
-			framesInFlight[frameNumber].execute(graphicsQueue, swapchain, windowExtent,
-				swapchainImages, swapchainImageViews,
-				depthImage, depthImageView,
-				firstFrame, pipeline, pipelineLayout,
-				vertexBuffer, renderObjects, descriptorSet);
+			RenderInfo renderInfo
+			{
+				.queue{ graphicsQueue },
+				.swapchain{ swapchain },
+				.windowExtent{ windowExtent },
+				.swapchainImages{ swapchainImages },
+				.swapchainImageViews{ swapchainImageViews },
+				.depthImage{ depthImage },
+				.depthImageView{ depthImageView },
+				.firstFrame{ firstFrame },
+				.pipeline{ pipeline },
+				.pipelineLayout{ pipelineLayout },
+				.vertexBuffer{ vertexBuffer },
+				.renderObjects{ renderObjects },
+				.renderObjectInstances{ renderObjectInstances },
+				.descriptorSet{ descriptorSet },
+			};
+
+			framesInFlight[frameNumber].execute(renderInfo);
 
 			glfwPollEvents();
 

@@ -14,6 +14,9 @@
 #include <utility>
 #include <vector>
 
+//temp
+#include <iostream>
+
 namespace Graphics
 {
 
@@ -62,7 +65,8 @@ namespace Graphics
 		VmaAllocationCreateInfo allocCI
 		{
 			.flags{ VMA_ALLOCATION_CREATE_MAPPED_BIT },
-			.usage{ VMA_MEMORY_USAGE_AUTO },
+			// It's only a mat4; it can probably fit on VRAM
+			.usage{ VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE },
 			.requiredFlags{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT },
 		};
 		VmaAllocationInfo allocInfo{};
@@ -129,27 +133,30 @@ namespace Graphics
 		destroyObjects();
 	}
 
-	void Frame::execute(VkQueue queue, VkSwapchainKHR swapchain, VkExtent2D windowExtent, const std::vector<VkImage>& swapchainImages, const std::vector<VkImageView>& swapchainImageViews, const Image& depthImage, VkImageView depthImageView, bool firstFrame, VkPipeline pipeline, VkPipelineLayout pipelineLayout, const Buffer& vertexBuffer, const std::vector<RenderObject>& renderables, VkDescriptorSet descriptorSet)
+	void Frame::waitFrame()
 	{
 		vkWaitForFences(m_device, 1, &m_renderFence, VK_TRUE, secondsToNanoseconds(1));
 		vkResetFences(m_device, 1, &m_renderFence);
+	}
 
-		std::uint32_t swapchainImageIndex{ acquireNextSwapchainImage(m_device, swapchain, m_presentSemaphore) };
+	void Frame::execute(const RenderInfo& renderInfo)
+	{
+		std::uint32_t swapchainImageIndex{ acquireNextSwapchainImage(m_device, renderInfo.swapchain, m_presentSemaphore) };
 
 		vkResetCommandPool(m_device, m_cmdPool, 0);
 		beginCommandBuffer(m_cmdBuffer, true);
 
-		prepareImageForColorAttachmentOutput(m_cmdBuffer, swapchainImages[swapchainImageIndex]);
+		prepareImageForColorAttachmentOutput(m_cmdBuffer, renderInfo.swapchainImages[swapchainImageIndex]);
 
-		if (firstFrame)
+		if (renderInfo.firstFrame)
 		{
-			correctDepthImageLayout(depthImage.image, m_cmdBuffer);
+			correctDepthImageLayout(renderInfo.depthImage.image, m_cmdBuffer);
 		}
 
 		VkRenderingAttachmentInfo colorAttachment
 		{
 			.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
-			.imageView{ swapchainImageViews[swapchainImageIndex] },
+			.imageView{ renderInfo.swapchainImageViews[swapchainImageIndex] },
 			.imageLayout{ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
 			.resolveMode{ VK_RESOLVE_MODE_NONE },
 			.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
@@ -163,7 +170,7 @@ namespace Graphics
 		VkRenderingAttachmentInfo depthAttachment
 		{
 			.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
-			.imageView{ depthImageView },
+			.imageView{ renderInfo.depthImageView },
 			.imageLayout{ VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL },
 			.resolveMode{ VK_RESOLVE_MODE_NONE },
 			.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
@@ -177,7 +184,7 @@ namespace Graphics
 			.renderArea
 			{
 				.offset{ 0, 0 },
-				.extent{ windowExtent },
+				.extent{ renderInfo.windowExtent },
 			},
 			.layerCount{ 1 },
 			.viewMask{ 0 },
@@ -188,26 +195,26 @@ namespace Graphics
 
 		vkCmdBeginRendering(m_cmdBuffer, &renderingInfo);
 
-		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipeline);
 
 		VkDescriptorSet descriptorSets[2]
 		{
 			m_descriptorSet,
-			descriptorSet
+			renderInfo.descriptorSet
 		};
-		vkCmdBindDescriptorSets(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 2, descriptorSets, 0, nullptr);
+		vkCmdBindDescriptorSets(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipelineLayout, 0, 2, descriptorSets, 0, nullptr);
 
 		constexpr VkDeviceSize offset{ 0 };
-		vkCmdBindVertexBuffers(m_cmdBuffer, 0, 1, &vertexBuffer.buffer, &offset);
+		vkCmdBindVertexBuffers(m_cmdBuffer, 0, 1, &renderInfo.vertexBuffer.buffer, &offset);
 
-		for (const auto& renderable : renderables)
+		for (const auto& instance : renderInfo.renderObjectInstances)
 		{
-			for (const auto& mesh : renderable.meshes)
+			for (const auto& mesh : renderInfo.renderObjects[instance.renderObject].meshes)
 			{
 				if (mesh.draw)
 				{
-					PushConstants pushConstants{ renderable.transform, mesh.textureIndex };
-					vkCmdPushConstants(m_cmdBuffer, pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
+					PushConstants pushConstants{ instance.transform, mesh.textureIndex };
+					vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
 
 					vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 					vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
@@ -217,13 +224,13 @@ namespace Graphics
 
 		vkCmdEndRendering(m_cmdBuffer);
 
-		prepareImageForPresentation(m_cmdBuffer, swapchainImages[swapchainImageIndex]);
+		prepareImageForPresentation(m_cmdBuffer, renderInfo.swapchainImages[swapchainImageIndex]);
 
 		vkEndCommandBuffer(m_cmdBuffer);
 
-		queueSubmit(queue, m_cmdBuffer, m_presentSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_renderSemaphore, m_renderFence);
+		queueSubmit(renderInfo.queue, m_cmdBuffer, m_presentSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_renderSemaphore, m_renderFence);
 
-		swapchainQueuePresent(queue, swapchain, m_renderSemaphore, swapchainImageIndex);
+		swapchainQueuePresent(renderInfo.queue, renderInfo.swapchain, m_renderSemaphore, swapchainImageIndex);
 	}
 
 	void Frame::destroyObjects()
