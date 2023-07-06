@@ -29,6 +29,19 @@ namespace Graphics
 			return m_rot;
 		}
 
+		const glm::vec3& front() const
+		{
+			return m_front;
+		}
+		const glm::vec3& right() const
+		{
+			return m_right;
+		}
+		const glm::vec3& up() const
+		{
+			return m_up;
+		}
+
 		Camera& move(float right, float up, float forward);
 		Camera& rotate(float x, float y);
 

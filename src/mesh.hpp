@@ -85,6 +85,7 @@ namespace Graphics
 			std::uint32_t                             textureIndex{};
 			bool                                      draw{ true };
 			std::unordered_map<Vertex, std::uint32_t> map{};
+			bool                                      opaque{ true };
 		};
 
 		RenderObject(const char* path, std::vector<Vertex>& vertices, VkDevice device, 

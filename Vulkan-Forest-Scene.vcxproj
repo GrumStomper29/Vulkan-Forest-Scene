@@ -241,6 +241,7 @@ glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\alloc.cpp" />
+    <ClCompile Include="src\attachment.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\cmd_buffer.cpp" />
     <ClCompile Include="src\descriptor.cpp" />
@@ -256,6 +257,7 @@ glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\alloc.hpp" />
+    <ClInclude Include="src\attachment.hpp" />
     <ClInclude Include="src\camera.hpp" />
     <ClInclude Include="src\cmd_buffer.hpp" />
     <ClInclude Include="src\descriptor.hpp" />
@@ -268,6 +270,8 @@ glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
     <ClInclude Include="src\sync.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\shadow.frag" />
+    <None Include="shaders\shadow.vert" />
     <None Include="shaders\uber.frag" />
     <None Include="shaders\uber.vert" />
   </ItemGroup>

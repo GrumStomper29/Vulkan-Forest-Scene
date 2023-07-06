@@ -8,6 +8,7 @@ layout (location = 3) in vec2 inTex;
 layout (location = 0) out vec3 outNorm;
 layout (location = 1) out vec3 outColor;
 layout (location = 2) out vec2 outTex;
+layout (location = 3) out vec4 fragPosLightSpace;
 
 layout (push_constant) uniform constants
 {
@@ -18,6 +19,7 @@ layout (push_constant) uniform constants
 layout (set = 0, binding = 0) uniform CameraBuffer
 {
 	mat4 viewProj;
+	mat4 lightSpaceMatrix;
 } cameraData;
 
 void main()
@@ -28,4 +30,6 @@ void main()
 	outNorm = inNorm;
 	outColor = inColor;
 	outTex = inTex;
+
+	fragPosLightSpace = cameraData.lightSpaceMatrix * pushConstants.transform * vec4(inPos, 1.0f);
 }

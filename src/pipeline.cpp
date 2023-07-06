@@ -70,21 +70,21 @@ namespace Graphics
 
 		return layout;
 	}
-
-	VkPipeline createPipeline(VkDevice device, VkPipelineLayout layout, VkExtent2D windowExtent, VkFormat colorAttachmentFormat)
+	
+	VkPipeline createGraphicsPipeline(const GraphicsPipelineCreateInfo& createInfo)
 	{
 		VkPipelineRenderingCreateInfo renderingInfo
 		{
 			.sType{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO },
 			.viewMask{ 0 },
-			.colorAttachmentCount{ 1 },
-			.pColorAttachmentFormats{ &colorAttachmentFormat },
-			.depthAttachmentFormat{ VK_FORMAT_D32_SFLOAT },
+			.colorAttachmentCount{ createInfo.colorAttachmentCount },
+			.pColorAttachmentFormats{ createInfo.pColorAttachmentFormats },
+			.depthAttachmentFormat{ createInfo.depthFormat },
 			.stencilAttachmentFormat{ VK_FORMAT_UNDEFINED },
 		};
 
-		VkShaderModule vertexShaderModule{ createShaderModule(device, "shaders/uber.vert.spv") };
-		VkShaderModule fragmentShaderModule{ createShaderModule(device, "shaders/uber.frag.spv") };
+		VkShaderModule vertexShaderModule{ createShaderModule(createInfo.device, createInfo.pVertexShaderPath) };
+		VkShaderModule fragmentShaderModule{ createShaderModule(createInfo.device, createInfo.pFragmentShaderPath) };
 
 		VkPipelineShaderStageCreateInfo stages[2]{};
 		stages[0] =
@@ -154,13 +154,13 @@ namespace Graphics
 			.topology{ VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST },
 			.primitiveRestartEnable{ VK_FALSE },
 		};
-		
+
 		VkViewport viewport
 		{
 			.x{ 0.0f },
 			.y{ 0.0f },
-			.width{ static_cast<float>(windowExtent.width) },
-			.height{ static_cast<float>(windowExtent.height) },
+			.width{ static_cast<float>(createInfo.viewportExtent.width) },
+			.height{ static_cast<float>(createInfo.viewportExtent.height) },
 			.minDepth{ 0.0f },
 			.maxDepth{ 1.0f },
 		};
@@ -168,7 +168,7 @@ namespace Graphics
 		VkRect2D scissor
 		{
 			.offset{ 0, 0 },
-			.extent{ windowExtent },
+			.extent{ createInfo.viewportExtent },
 		};
 
 		VkPipelineViewportStateCreateInfo viewportState
@@ -195,7 +195,7 @@ namespace Graphics
 		VkPipelineMultisampleStateCreateInfo multisampleState
 		{
 			.sType{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO },
-			.rasterizationSamples{ VK_SAMPLE_COUNT_1_BIT },
+			.rasterizationSamples{ createInfo.sampleCount },
 			.sampleShadingEnable{ VK_FALSE },
 			.alphaToCoverageEnable{ VK_FALSE },
 			.alphaToOneEnable{ VK_FALSE },
@@ -215,8 +215,14 @@ namespace Graphics
 
 		VkPipelineColorBlendAttachmentState attachment
 		{
-			.blendEnable{ VK_FALSE },
-			.colorWriteMask{ VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT }
+			.blendEnable{ VK_TRUE },
+			.srcColorBlendFactor{ VK_BLEND_FACTOR_SRC_ALPHA },
+			.dstColorBlendFactor{ VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA },
+			.colorBlendOp{ VK_BLEND_OP_ADD },
+			.srcAlphaBlendFactor{ VK_BLEND_FACTOR_ONE },
+			.dstAlphaBlendFactor{ VK_BLEND_FACTOR_ZERO },
+			.alphaBlendOp{ VK_BLEND_OP_ADD },
+			.colorWriteMask{ VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT },
 		};
 
 		VkPipelineColorBlendStateCreateInfo colorBlendState
@@ -240,14 +246,14 @@ namespace Graphics
 			.pMultisampleState{ &multisampleState },
 			.pDepthStencilState{ &depthStencilState },
 			.pColorBlendState{ &colorBlendState },
-			.layout{ layout },
+			.layout{ createInfo.pipelineLayout },
 		};
 
 		VkPipeline pipeline{};
-		vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &pipeline);
+		vkCreateGraphicsPipelines(createInfo.device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &pipeline);
 
-		vkDestroyShaderModule(device, vertexShaderModule, nullptr);
-		vkDestroyShaderModule(device, fragmentShaderModule, nullptr);
+		vkDestroyShaderModule(createInfo.device, vertexShaderModule, nullptr);
+		vkDestroyShaderModule(createInfo.device, fragmentShaderModule, nullptr);
 
 		return pipeline;
 	}

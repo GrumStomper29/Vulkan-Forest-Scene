@@ -10,7 +10,7 @@ namespace Graphics
 		VkDescriptorPoolSize poolSizes[]
 		{
 			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1001 },
 			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
@@ -51,7 +51,7 @@ namespace Graphics
 		{
 			.binding{ 0 },
 			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
-			.descriptorCount{ 1000 },
+			.descriptorCount{ 1001 },
 			.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
 		};
 

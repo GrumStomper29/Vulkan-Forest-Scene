@@ -24,11 +24,5 @@ namespace Graphics
 	void prepareImageForPresentation(VkCommandBuffer commandBuffer, VkImage image);
 
 	void swapchainQueuePresent(VkQueue queue, VkSwapchainKHR swapchain, VkSemaphore waitSemaphore, std::uint32_t imageIndex);
-
-	Image createDepthImage(VmaAllocator allocator, VkExtent2D extent);
-
-	VkImageView createDepthImageView(VkDevice device, VkImage depthImage);
-
-	void correctDepthImageLayout(VkImage image, VkCommandBuffer commandBuffer);
-
+	
 }

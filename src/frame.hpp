@@ -16,6 +16,7 @@ namespace Graphics
 	struct CameraUBOData
 	{
 		glm::mat4 viewProj{ 1.0f };
+		glm::mat4 lightTransform{ 1.0f };
 	};
 
 	struct PushConstants
@@ -24,18 +25,31 @@ namespace Graphics
 		std::uint32_t textureIndex{};
 	};
 
+	struct ShadowPassPushConstants
+	{
+		glm::mat4 vertexTransform{};
+		glm::mat4 lightTransform{};
+	};
+
 	struct RenderInfo
 	{
 		VkQueue queue{};
 		VkSwapchainKHR swapchain{};
 		VkExtent2D windowExtent{};
+		VkExtent2D shadowViewport{};
 		const std::vector<VkImage>& swapchainImages{};
 		const std::vector<VkImageView>& swapchainImageViews{};
+		const Image& colorImage{};
+		VkImageView colorImageView{};
 		const Image& depthImage{};
 		VkImageView depthImageView{};
+		const Image& shadowImage{};
+		VkImageView shadowImageView{};
 		bool firstFrame{};
 		VkPipeline pipeline{};
+		VkPipeline shadowPipeline{};
 		VkPipelineLayout pipelineLayout{};
+		VkPipelineLayout shadowPipelineLayout{};
 		const Buffer& vertexBuffer{};
 		const std::vector<RenderObject>& renderObjects{};
 		const std::vector<RenderObjectInstance>& renderObjectInstances{};

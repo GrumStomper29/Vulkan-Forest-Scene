@@ -5,6 +5,7 @@
 #include "sync.hpp"
 #include "swapchain.hpp"
 #include "mesh.hpp"
+#include "attachment.hpp"
 
 #include "volk/volk.h"
 #include "VMA/vk_mem_alloc.h"
@@ -19,6 +20,12 @@
 
 namespace Graphics
 {
+
+	struct QueuedMesh
+	{
+		const RenderObject::Mesh& mesh{};
+		const glm::mat4& transform{};
+	};
 
 	VkDescriptorSetLayout Frame::m_descriptorSetLayout{};
 
@@ -65,7 +72,6 @@ namespace Graphics
 		VmaAllocationCreateInfo allocCI
 		{
 			.flags{ VMA_ALLOCATION_CREATE_MAPPED_BIT },
-			// It's only a mat4; it can probably fit on VRAM
 			.usage{ VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE },
 			.requiredFlags{ VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT },
 		};
@@ -146,56 +152,37 @@ namespace Graphics
 		vkResetCommandPool(m_device, m_cmdPool, 0);
 		beginCommandBuffer(m_cmdBuffer, true);
 
-		prepareImageForColorAttachmentOutput(m_cmdBuffer, renderInfo.swapchainImages[swapchainImageIndex]);
+		// Shadowpass
 
-		if (renderInfo.firstFrame)
-		{
-			correctDepthImageLayout(renderInfo.depthImage.image, m_cmdBuffer);
-		}
+		correctDepthAttachmentImageLayout(renderInfo.shadowImage.image, m_cmdBuffer);
 
-		VkRenderingAttachmentInfo colorAttachment
+		VkRenderingAttachmentInfo shadowMapAttachment
 		{
 			.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
-			.imageView{ renderInfo.swapchainImageViews[swapchainImageIndex] },
-			.imageLayout{ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-			.resolveMode{ VK_RESOLVE_MODE_NONE },
-			.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
-			.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
-			.clearValue
-			{
-				.color{ 0.01f, 0.01f, 0.01f, 1.0f },
-			},
-		};
-
-		VkRenderingAttachmentInfo depthAttachment
-		{
-			.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
-			.imageView{ renderInfo.depthImageView },
+			.imageView{ renderInfo.shadowImageView },
 			.imageLayout{ VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL },
 			.resolveMode{ VK_RESOLVE_MODE_NONE },
 			.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
 			.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
-			.clearValue{.depthStencil{.depth{ 1.0f } } },
+			.clearValue{ .depthStencil{ .depth{ 1.0f } } },
 		};
 
-		VkRenderingInfo renderingInfo
+		VkRenderingInfo shadowPass
 		{
 			.sType{ VK_STRUCTURE_TYPE_RENDERING_INFO },
 			.renderArea
 			{
 				.offset{ 0, 0 },
-				.extent{ renderInfo.windowExtent },
+				.extent{ renderInfo.shadowViewport },
 			},
 			.layerCount{ 1 },
-			.viewMask{ 0 },
-			.colorAttachmentCount{ 1 },
-			.pColorAttachments{ &colorAttachment },
-			.pDepthAttachment{ &depthAttachment },
+			.colorAttachmentCount{ 0 },
+			.pDepthAttachment{ &shadowMapAttachment },
 		};
 
-		vkCmdBeginRendering(m_cmdBuffer, &renderingInfo);
+		vkCmdBeginRendering(m_cmdBuffer, &shadowPass);
 
-		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipeline);
+		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.shadowPipeline);
 
 		VkDescriptorSet descriptorSets[2]
 		{
@@ -213,13 +200,136 @@ namespace Graphics
 			{
 				if (mesh.draw)
 				{
-					PushConstants pushConstants{ instance.transform, mesh.textureIndex };
-					vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
+					PushConstants pushConstants{ instance.transform };
+					vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants),
+						&pushConstants);
 
 					vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 					vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
 				}
 			}
+		}
+
+		vkCmdEndRendering(m_cmdBuffer);
+
+		VkImageMemoryBarrier imageBarrier
+		{
+			.sType{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER },
+			.srcAccessMask{ VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT },
+			.dstAccessMask{ VK_ACCESS_SHADER_READ_BIT },
+			.oldLayout{ VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL },
+			.newLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			.image{ renderInfo.shadowImage.image },
+			.subresourceRange
+			{
+				.aspectMask{ VK_IMAGE_ASPECT_DEPTH_BIT },
+				.baseMipLevel{ 0 },
+				.levelCount{ 1 },
+				.baseArrayLayer{ 0 },
+				.layerCount{ 1 },
+			},
+		};
+
+		vkCmdPipelineBarrier(m_cmdBuffer, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0,
+			nullptr, 1, &imageBarrier);
+
+		// Renderpass
+		prepareImageForColorAttachmentOutput(m_cmdBuffer, renderInfo.swapchainImages[swapchainImageIndex]);
+
+		if (renderInfo.firstFrame)
+		{
+			correctColorAttachmentImageLayout(renderInfo.colorImage.image, m_cmdBuffer);
+			correctDepthAttachmentImageLayout(renderInfo.depthImage.image, m_cmdBuffer);
+		}
+		
+		VkRenderingAttachmentInfo colorAttachmentResolve
+		{
+			.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
+			.imageView{ renderInfo.colorImageView },
+			.imageLayout{ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+			.resolveMode{ VK_RESOLVE_MODE_AVERAGE_BIT },
+			.resolveImageView{ renderInfo.swapchainImageViews[swapchainImageIndex] },
+			.resolveImageLayout{ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+			.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
+			.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
+			.clearValue
+			{
+				.color{ 0.52f, 0.8f, 0.92f, 1.0f },
+			},
+		};
+
+		VkRenderingAttachmentInfo depthAttachment
+		{
+			.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
+			.imageView{ renderInfo.depthImageView },
+			.imageLayout{ VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL },
+			.resolveMode{ VK_RESOLVE_MODE_NONE },
+			.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR },
+			.storeOp{ VK_ATTACHMENT_STORE_OP_STORE },
+			.clearValue{.depthStencil{.depth{ 1.0f } } },
+		};
+
+		VkRenderingAttachmentInfo colorAttachments[1]{ colorAttachmentResolve };
+
+		VkRenderingInfo renderingInfo
+		{
+			.sType{ VK_STRUCTURE_TYPE_RENDERING_INFO },
+			.renderArea
+			{
+				.offset{ 0, 0 },
+				.extent{ renderInfo.windowExtent },
+			},
+			.layerCount{ 1 },
+			.viewMask{ 0 },
+			.colorAttachmentCount{ 1 },
+			.pColorAttachments{ colorAttachments },
+			.pDepthAttachment{ &depthAttachment },
+		};
+
+		vkCmdBeginRendering(m_cmdBuffer, &renderingInfo);
+
+		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipeline);
+
+		vkCmdBindDescriptorSets(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipelineLayout, 0, 2, descriptorSets, 0, nullptr);
+
+		vkCmdBindVertexBuffers(m_cmdBuffer, 0, 1, &renderInfo.vertexBuffer.buffer, &offset);
+
+		// Meshes with transparency should be drawn last
+		std::vector<QueuedMesh> meshQueue{};
+
+		for (const auto& instance : renderInfo.renderObjectInstances)
+		{
+			for (const auto& mesh : renderInfo.renderObjects[instance.renderObject].meshes)
+			{
+				if (mesh.draw)
+				{
+					if (mesh.opaque)
+					{
+						PushConstants pushConstants{ instance.transform, mesh.textureIndex };
+						vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
+
+						vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
+					}
+					else
+					{
+						meshQueue.push_back({
+							.mesh{ mesh },
+							.transform{ instance.transform },
+							});
+					}
+				}
+			}
+		}
+
+		for (const auto& queuedMesh : meshQueue)
+		{
+			PushConstants pushConstants{ queuedMesh.transform, queuedMesh.mesh.textureIndex };
+			vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstants);
+
+			vkCmdBindIndexBuffer(m_cmdBuffer, queuedMesh.mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(m_cmdBuffer, queuedMesh.mesh.indexCount, 1, 0, 0, 0);
 		}
 
 		vkCmdEndRendering(m_cmdBuffer);

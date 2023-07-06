@@ -60,6 +60,9 @@
     <ClCompile Include="src\descriptor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\attachment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\instance.hpp">
@@ -95,12 +98,21 @@
     <ClInclude Include="src\descriptor.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\attachment.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\uber.frag">
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\uber.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\shadow.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\shadow.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>
