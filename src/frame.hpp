@@ -100,6 +100,9 @@ namespace Graphics
 		VkDevice m_device{};
 		VmaAllocator m_allocator{};
 
+		void shadowpass(const RenderInfo& renderInfo);
+		void renderpass(const RenderInfo& renderInfo, std::uint32_t swapchainImageIndex);
+
 		void destroyObjects();
 		void move(Frame&& f);
 	};

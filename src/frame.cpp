@@ -15,9 +15,6 @@
 #include <utility>
 #include <vector>
 
-//temp
-#include <iostream>
-
 namespace Graphics
 {
 
@@ -152,8 +149,19 @@ namespace Graphics
 		vkResetCommandPool(m_device, m_cmdPool, 0);
 		beginCommandBuffer(m_cmdBuffer, true);
 
-		// Shadowpass
+		shadowpass(renderInfo);
 
+		renderpass(renderInfo, swapchainImageIndex);
+
+		vkEndCommandBuffer(m_cmdBuffer);
+
+		queueSubmit(renderInfo.queue, m_cmdBuffer, m_presentSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_renderSemaphore, m_renderFence);
+
+		swapchainQueuePresent(renderInfo.queue, renderInfo.swapchain, m_renderSemaphore, swapchainImageIndex);
+	}
+
+	void Frame::shadowpass(const RenderInfo& renderInfo)
+	{
 		correctDepthAttachmentImageLayout(renderInfo.shadowImage.image, m_cmdBuffer);
 
 		VkRenderingAttachmentInfo shadowMapAttachment
@@ -167,7 +175,7 @@ namespace Graphics
 			.clearValue{ .depthStencil{ .depth{ 1.0f } } },
 		};
 
-		VkRenderingInfo shadowPass
+		VkRenderingInfo renderingInfo
 		{
 			.sType{ VK_STRUCTURE_TYPE_RENDERING_INFO },
 			.renderArea
@@ -180,7 +188,7 @@ namespace Graphics
 			.pDepthAttachment{ &shadowMapAttachment },
 		};
 
-		vkCmdBeginRendering(m_cmdBuffer, &shadowPass);
+		vkCmdBeginRendering(m_cmdBuffer, &renderingInfo);
 
 		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.shadowPipeline);
 
@@ -212,29 +220,11 @@ namespace Graphics
 
 		vkCmdEndRendering(m_cmdBuffer);
 
-		VkImageMemoryBarrier imageBarrier
-		{
-			.sType{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER },
-			.srcAccessMask{ VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT },
-			.dstAccessMask{ VK_ACCESS_SHADER_READ_BIT },
-			.oldLayout{ VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL },
-			.newLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-			.image{ renderInfo.shadowImage.image },
-			.subresourceRange
-			{
-				.aspectMask{ VK_IMAGE_ASPECT_DEPTH_BIT },
-				.baseMipLevel{ 0 },
-				.levelCount{ 1 },
-				.baseArrayLayer{ 0 },
-				.layerCount{ 1 },
-			},
-		};
+		prepareDepthImageForSampling(m_cmdBuffer, renderInfo.shadowImage.image);
+	}
 
-		vkCmdPipelineBarrier(m_cmdBuffer, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0,
-			nullptr, 1, &imageBarrier);
-
-		// Renderpass
+	void Frame::renderpass(const RenderInfo& renderInfo, std::uint32_t swapchainImageIndex)
+	{
 		prepareImageForColorAttachmentOutput(m_cmdBuffer, renderInfo.swapchainImages[swapchainImageIndex]);
 
 		if (renderInfo.firstFrame)
@@ -242,7 +232,7 @@ namespace Graphics
 			correctColorAttachmentImageLayout(renderInfo.colorImage.image, m_cmdBuffer);
 			correctDepthAttachmentImageLayout(renderInfo.depthImage.image, m_cmdBuffer);
 		}
-		
+
 		VkRenderingAttachmentInfo colorAttachmentResolve
 		{
 			.sType{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO },
@@ -291,8 +281,14 @@ namespace Graphics
 
 		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipeline);
 
+		VkDescriptorSet descriptorSets[2]
+		{
+			m_descriptorSet,
+			renderInfo.descriptorSet
+		};
 		vkCmdBindDescriptorSets(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipelineLayout, 0, 2, descriptorSets, 0, nullptr);
 
+		constexpr VkDeviceSize offset{ 0 };
 		vkCmdBindVertexBuffers(m_cmdBuffer, 0, 1, &renderInfo.vertexBuffer.buffer, &offset);
 
 		// Meshes with transparency should be drawn last
@@ -335,12 +331,6 @@ namespace Graphics
 		vkCmdEndRendering(m_cmdBuffer);
 
 		prepareImageForPresentation(m_cmdBuffer, renderInfo.swapchainImages[swapchainImageIndex]);
-
-		vkEndCommandBuffer(m_cmdBuffer);
-
-		queueSubmit(renderInfo.queue, m_cmdBuffer, m_presentSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, m_renderSemaphore, m_renderFence);
-
-		swapchainQueuePresent(renderInfo.queue, renderInfo.swapchain, m_renderSemaphore, swapchainImageIndex);
 	}
 
 	void Frame::destroyObjects()

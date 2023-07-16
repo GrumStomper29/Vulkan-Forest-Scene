@@ -36,51 +36,51 @@ namespace Graphics
 
 	struct Instance
 	{
-		VkExtent2D windowExtent{};
+		VkExtent2D  windowExtent{};
 		GLFWwindow* window{};
 
-		VkInstance instance{};
+		VkInstance       instance{};
 		VkPhysicalDevice physicalDevice{};
 
 		std::uint32_t graphicsQueueFamily{};
-		VkQueue graphicsQueue{};
-		VkDevice device{};
-		VmaAllocator allocator{};
+		VkQueue       graphicsQueue{};
+		VkDevice      device{};
+		VmaAllocator  allocator{};
 
-		VkSurfaceKHR surface{};
-		VkFormat swapchainImageFormat{};
-		VkSwapchainKHR swapchain{};
-		std::vector<VkImage> swapchainImages{};
+		VkSurfaceKHR             surface{};
+		VkFormat                 swapchainImageFormat{};
+		VkSwapchainKHR           swapchain{};
+		std::vector<VkImage>     swapchainImages{};
 		std::vector<VkImageView> swapchainImageViews{};
-		VkSampleCountFlagBits sampleCount{};
+		VkSampleCountFlagBits    sampleCount{};
 
-		Image colorAttachmentImage{};
+		Image       colorAttachmentImage{};
 		VkImageView colorAttachmentImageView{};
 
-		Image depthAttachmentImage{};
+		Image       depthAttachmentImage{};
 		VkImageView depthAttachmentImageView{};
 
-		VkExtent2D shadowMapExtent{};
-		Image shadowMap{};
+		VkExtent2D  shadowMapExtent{};
+		Image       shadowMap{};
 		VkImageView shadowMapView{};
-		VkSampler shadowMapSampler{};
+		VkSampler   shadowMapSampler{};
 
-		VkCommandPool GPCmdPool{};
+		VkCommandPool   GPCmdPool{};
 		VkCommandBuffer GPCmdBuffer{};
-		VkFence GPFence{};
+		VkFence         GPFence{};
 
 		std::vector<Frame> framesInFlight{};
 
-		VkDescriptorPool globalDescriptorPool{};
+		VkDescriptorPool      globalDescriptorPool{};
 		VkDescriptorSetLayout globalDescriptorSetLayout{};
-		VkDescriptorSet globalDescriptorSet{};
+		VkDescriptorSet       globalDescriptorSet{};
 
 		VkPipelineLayout uberPipelineLayout{};
-		VkPipeline uberPipeline{};
-		VkPipeline shadowpassPipeline{};
+		VkPipeline       uberPipeline{};
+		VkPipeline       shadowpassPipeline{};
 
 		std::vector<RenderObject> renderObjects{};
-		Buffer vertexBuffer{};
+		Buffer                    vertexBuffer{};
 
 		std::vector<Texture> textures{};
 		
@@ -108,44 +108,44 @@ namespace Graphics
 			throw std::exception{ "failed to create window" };
 		}
 
-		instance.instance = createInstance(true);
+		instance.instance       = createInstance(true);
 		instance.physicalDevice = getPhysicalDevice(instance.instance);
 
 		instance.graphicsQueueFamily = getGraphicsQueueFamily(instance.physicalDevice);
-		instance.device = createDevice(instance.physicalDevice, instance.graphicsQueueFamily, instance.graphicsQueue);
-		instance.allocator = createAllocator(instance.instance, instance.physicalDevice, instance.device);
+		instance.device              = createDevice(instance.physicalDevice, instance.graphicsQueueFamily, instance.graphicsQueue);
+		instance.allocator           = createAllocator(instance.instance, instance.physicalDevice, instance.device);
 
 		glfwCreateWindowSurface(instance.instance, instance.window, nullptr, &instance.surface);
 		instance.swapchainImageFormat = VK_FORMAT_B8G8R8A8_SRGB;
-		instance.swapchain = createSwapchain(instance.device, instance.surface, 4, instance.swapchainImageFormat, instance.windowExtent);
-		instance.swapchainImages = getSwapchainImages(instance.device, instance.swapchain);
-		instance.swapchainImageViews = createSwapchainImageViews(instance.device, instance.swapchainImages, instance.swapchainImageFormat);
-		instance.sampleCount = VK_SAMPLE_COUNT_8_BIT;
+		instance.swapchain            = createSwapchain(instance.device, instance.surface, 4, instance.swapchainImageFormat, instance.windowExtent);
+		instance.swapchainImages      = getSwapchainImages(instance.device, instance.swapchain);
+		instance.swapchainImageViews  = createSwapchainImageViews(instance.device, instance.swapchainImages, instance.swapchainImageFormat);
+		instance.sampleCount          = VK_SAMPLE_COUNT_8_BIT;
 
-		instance.colorAttachmentImage = createColorAttachmentImage(instance.allocator, instance.swapchainImageFormat, instance.windowExtent, instance.sampleCount);
+		instance.colorAttachmentImage     = createColorAttachmentImage(instance.allocator, instance.swapchainImageFormat, instance.windowExtent, instance.sampleCount);
 		instance.colorAttachmentImageView = createColorAttachmentImageView(instance.device, instance.colorAttachmentImage.image, instance.swapchainImageFormat);
 
-		instance.depthAttachmentImage = createDepthAttachmentImage(instance.allocator, instance.windowExtent, instance.sampleCount);
+		instance.depthAttachmentImage     = createDepthAttachmentImage(instance.allocator, instance.windowExtent, instance.sampleCount);
 		instance.depthAttachmentImageView = createDepthAttachmentImageView(instance.device, instance.depthAttachmentImage.image);
 
-		instance.shadowMapExtent = { 1024, 1024 };
-		instance.shadowMap = createDepthAttachmentImage(instance.allocator, instance.shadowMapExtent,
-			VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		instance.shadowMapView = createDepthAttachmentImageView(instance.device, instance.shadowMap.image);
+		instance.shadowMapExtent  = { 1024, 1024 };
+		instance.shadowMap        = createDepthAttachmentImage(instance.allocator, instance.shadowMapExtent,
+		                                VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		instance.shadowMapView    = createDepthAttachmentImageView(instance.device, instance.shadowMap.image);
 		instance.shadowMapSampler = createShadowMapSampler(instance.device);
 
-		instance.GPCmdPool = createCommandPool(instance.device, instance.graphicsQueueFamily, true);
+		instance.GPCmdPool   = createCommandPool(instance.device, instance.graphicsQueueFamily, true);
 		instance.GPCmdBuffer = allocateCommandBuffer(instance.device, instance.GPCmdPool);
-		instance.GPFence = createFence(instance.device, false);
+		instance.GPFence     = createFence(instance.device, false);
 
 		Frame::init(instance.device);
 		instance.framesInFlight.reserve(2);
 		instance.framesInFlight.push_back({ instance.device, instance.allocator, instance.graphicsQueueFamily });
 		instance.framesInFlight.push_back({ instance.device, instance.allocator, instance.graphicsQueueFamily });
 
-		instance.globalDescriptorPool = createDescriptorPool(instance.device);
+		instance.globalDescriptorPool      = createDescriptorPool(instance.device);
 		instance.globalDescriptorSetLayout = createDescriptorSetLayout(instance.device);
-		instance.globalDescriptorSet = allocateDescriptorSet(instance.device, instance.globalDescriptorPool, instance.globalDescriptorSetLayout);
+		instance.globalDescriptorSet       = allocateDescriptorSet(instance.device, instance.globalDescriptorPool, instance.globalDescriptorSetLayout);
 
 		writeShadowMapSampler(instance.device, instance.shadowMapView, instance.shadowMapSampler, instance.globalDescriptorSet);
 
@@ -215,28 +215,7 @@ namespace Graphics
 			}
 		}
 
-		std::vector<VkDescriptorImageInfo> imageInfos(instance.textures.size());
-		std::vector<VkWriteDescriptorSet> writes(instance.textures.size());
-		for (int i{ 0 }; i < instance.textures.size(); ++i)
-		{
-			imageInfos[i] =
-			{
-				.sampler{ instance.textures[i].vkSampler() },
-				.imageView{ instance.textures[i].vkImageView() },
-				.imageLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-			};
-			writes[i] =
-			{
-				.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
-				.dstSet{ instance.globalDescriptorSet },
-				.dstBinding{ 0 },
-				.dstArrayElement{ static_cast<std::uint32_t>(i) },
-				.descriptorCount{ 1 },
-				.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
-				.pImageInfo{ &imageInfos[i] },
-			};
-		}
-		vkUpdateDescriptorSets(instance.device, writes.size(), writes.data(), 0, nullptr);
+		writeTextureSamplers(instance.device, instance.globalDescriptorSet, instance.textures);
 
 		instance.renderObjectInstances.push_back({ .renderObject{ 0 } });
 		instance.renderObjectInstances[0].transform = glm::scale(instance.renderObjectInstances[0].transform, glm::vec3{ 1.0f });

@@ -20,6 +20,8 @@ namespace Graphics
 
 	void correctDepthAttachmentImageLayout(VkImage image, VkCommandBuffer commandBuffer);
 
+	void prepareDepthImageForSampling(VkCommandBuffer commandBuffer, VkImage image);
+
 	VkSampler createShadowMapSampler(VkDevice device);
 
 	void writeShadowMapSampler(VkDevice device, VkImageView imageView, VkSampler sampler, VkDescriptorSet descriptorSet);

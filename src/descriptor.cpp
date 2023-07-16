@@ -1,6 +1,10 @@
 #include "descriptor.hpp"
 
+#include "mesh.hpp"
+
 #include "volk/volk.h"
+
+#include <vector>
 
 namespace Graphics
 {
@@ -83,6 +87,32 @@ namespace Graphics
 		vkAllocateDescriptorSets(device, &setAI, &set);
 
 		return set;
+	}
+
+	void writeTextureSamplers(VkDevice device, VkDescriptorSet descriptorSet, const std::vector<Texture>& textures)
+	{
+		std::vector<VkDescriptorImageInfo> imageInfos(textures.size());
+		std::vector<VkWriteDescriptorSet> writes(textures.size());
+		for (int i{ 0 }; i < textures.size(); ++i)
+		{
+			imageInfos[i] =
+			{
+				.sampler{ textures[i].vkSampler() },
+				.imageView{ textures[i].vkImageView() },
+				.imageLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			};
+			writes[i] =
+			{
+				.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+				.dstSet{ descriptorSet },
+				.dstBinding{ 0 },
+				.dstArrayElement{ static_cast<std::uint32_t>(i) },
+				.descriptorCount{ 1 },
+				.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+				.pImageInfo{ &imageInfos[i] },
+			};
+		}
+		vkUpdateDescriptorSets(device, writes.size(), writes.data(), 0, nullptr);
 	}
 
 }
