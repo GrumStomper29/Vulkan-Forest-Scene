@@ -216,12 +216,15 @@ namespace Graphics
 			{
 				if (mesh.draw)
 				{
-					PushConstants pushConstants{ instance.transform };
-					vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants),
-						&pushConstants);
+					if (mesh.opaque)
+					{
+						PushConstants pushConstants{ instance.transform };
+						vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants),
+							&pushConstants);
 
-					vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-					vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
+						vkCmdBindIndexBuffer(m_cmdBuffer, mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdDrawIndexed(m_cmdBuffer, mesh.indexCount, 1, 0, 0, 0);
+					}
 				}
 			}
 		}
@@ -335,7 +338,7 @@ namespace Graphics
 				}
 			}
 		}
-
+		
 		for (const auto& queuedMesh : meshQueue)
 		{
 			PushConstants pushConstants{ queuedMesh.transform, queuedMesh.mesh.textureIndex };
@@ -344,7 +347,7 @@ namespace Graphics
 			vkCmdBindIndexBuffer(m_cmdBuffer, queuedMesh.mesh.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 			vkCmdDrawIndexed(m_cmdBuffer, queuedMesh.mesh.indexCount, 1, 0, 0, 0);
 		}
-
+		
 		vkCmdEndRendering(m_cmdBuffer);
 
 		prepareImageForPresentation(m_cmdBuffer, renderInfo.swapchainImages[swapchainImageIndex]);
