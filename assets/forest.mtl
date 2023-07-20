@@ -1,0 +1,53 @@
+# Blender 3.6.0 MTL File: 'forest.blend'
+# www.blender.org
+
+newmtl Material.001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd terrain.jpg
+
+newmtl Prosopis_Cineraria_Bark
+Ns 1000.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd tree_map/Prosopis_Cineraria_Tree_Bark.jpg
+map_Bump -bm 0.300000 uploads_files_2654546_13+Low+Poly+2+Tree_OBJ/Bark_Normal_Bump_Normal_Bump.tga
+
+newmtl Prosopis_Cineraria_Leaf_1
+Ns 10.000005
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 1
+map_Kd tree_map/Prosopis_Cineraria_Tree_Leaf_01.tga
+map_d uploads_files_2654546_13+Low+Poly+2+Tree_OBJ/Prosopis_Cineraria_Tree_Leaf_01.tga
+
+newmtl Prosopis_Cineraria_Leaf_2
+Ns 10.000005
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 1
+map_Kd tree_map/Prosopis_Cineraria_Tree_Leaf_02.tga
+map_d uploads_files_2654546_13+Low+Poly+2+Tree_OBJ/Prosopis_Cineraria_Tree_Leaf_02.tga
+
+newmtl Prosopis_Cineraria_Leaf_3
+Ns 10.000005
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 1
+map_Kd tree_map/Prosopis_Cineraria_Tree_Leaf_03.tga
+map_d uploads_files_2654546_13+Low+Poly+2+Tree_OBJ/Prosopis_Cineraria_Tree_Leaf_03.tga

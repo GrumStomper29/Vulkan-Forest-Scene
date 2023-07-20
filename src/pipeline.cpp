@@ -204,8 +204,8 @@ namespace Graphics
 		VkPipelineDepthStencilStateCreateInfo depthStencilState
 		{
 			.sType{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO },
-			.depthTestEnable{ VK_TRUE },
-			.depthWriteEnable{ VK_TRUE },
+			.depthTestEnable{ createInfo.depthTestEnable },
+			.depthWriteEnable{ createInfo.depthTestEnable },
 			.depthCompareOp{ VK_COMPARE_OP_LESS },
 			.depthBoundsTestEnable{ VK_FALSE },
 			.stencilTestEnable{ VK_FALSE },

@@ -22,6 +22,8 @@ namespace Graphics
 		VkSampleCountFlagBits sampleCount{};
 
 		VkPipelineLayout pipelineLayout{};
+
+		bool depthTestEnable{ true };
 	};
 
 	VkShaderModule createShaderModule(VkDevice device, const char* path);

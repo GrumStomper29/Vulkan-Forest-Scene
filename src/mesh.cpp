@@ -7,7 +7,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "TinyObj/tiny_obj_loader.h"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
 #include <algorithm>
@@ -386,10 +385,13 @@ namespace Graphics
 					newVertex.color.b = attrib.colors[3 * index.vertex_index + 2];
 
 					int material{ shapes[s].mesh.material_ids[f] };
-					
-					newVertex.color.r = materials[material].diffuse[0];
-					newVertex.color.g = materials[material].diffuse[1];
-					newVertex.color.b = materials[material].diffuse[2];
+
+					if (material != -1)
+					{
+						newVertex.color.r = materials[material].diffuse[0];
+						newVertex.color.g = materials[material].diffuse[1];
+						newVertex.color.b = materials[material].diffuse[2];
+					}
 
 					std::vector<Mesh>::iterator result{};
 					if (meshes.size() != 0)
@@ -408,7 +410,7 @@ namespace Graphics
 					{
 						meshes.push_back(Mesh{
 							.material{ material },
-							.diffusePath{ materials[material].diffuse_texname },
+							.diffusePath{ material == -1 ? "" : materials[material].diffuse_texname },
 							});
 						meshes.back().map[newVertex] = static_cast<std::uint32_t>(vertices.size());
 						meshes.back().indices.push_back(static_cast<std::uint32_t>(vertices.size()));

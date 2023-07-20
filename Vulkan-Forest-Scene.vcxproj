@@ -253,6 +253,7 @@ glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
     <ClCompile Include="src\pipeline.cpp" />
     <ClCompile Include="src\swapchain.cpp" />
     <ClCompile Include="src\sync.cpp" />
+    <ClCompile Include="src\texture.cpp" />
     <ClCompile Include="third_party\volk\volk.c" />
   </ItemGroup>
   <ItemGroup>
@@ -268,10 +269,13 @@ glslc shaders/uber.frag -o shaders/uber.frag.spv</Command>
     <ClInclude Include="src\pipeline.hpp" />
     <ClInclude Include="src\swapchain.hpp" />
     <ClInclude Include="src\sync.hpp" />
+    <ClInclude Include="src\texture.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shadow.frag" />
     <None Include="shaders\shadow.vert" />
+    <None Include="shaders\skybox.frag" />
+    <None Include="shaders\skybox.vert" />
     <None Include="shaders\uber.frag" />
     <None Include="shaders\uber.vert" />
   </ItemGroup>

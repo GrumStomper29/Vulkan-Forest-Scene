@@ -15,7 +15,7 @@ layout (push_constant) uniform constants
 	uint textureIndex;
 } pushConstants;
 
-layout (set = 1, binding = 0) uniform sampler2D textures[];
+layout (set = 1, binding = 1) uniform sampler2D textures[];
 
 float shadowCalc(vec4 pos)
 {
@@ -26,17 +26,25 @@ float shadowCalc(vec4 pos)
 	float closestDepth = texture(textures[1000], projCoords.xy).r;
 	float currentDepth = projCoords.z;
 
-	float bias = 0.005;
+	const float bias = 0.005f;
 
-	float shadow = currentDepth - bias > closestDepth ? 1.0f : 0.0f;
+	float shadow = 0.0f;
+	vec2 texelSize = 1.0f / textureSize(textures[1000], 0);
+	for (int x = -1; x <= 1; ++x)
+	{
+		for (int y = -1; y <= 1; ++y)
+		{
+			float pfcDepth = texture(textures[1000], projCoords.xy + vec2(x, y) * texelSize).r;
+			shadow += currentDepth - bias > pfcDepth ? 1.0f : 0.0f;
+		}
+	}
+	shadow /= 9.0f;
 
 	return shadow;
 }
 
 void main()
 {
-	float diffuse = max(dot(inNorm, vec3(1.0f, 1.0f, 1.0f)), 0.0f);
-
 	if (pushConstants.textureIndex == 1001)
 	{
 		// There is no texture
@@ -52,10 +60,13 @@ void main()
 		discard;
 	}
 
-	diffuse = max(diffuse, 0.7f);
+	const float ambient = 0.1f;
+
+	const vec3 lightDir = normalize(vec3(2.0f, 1.0f, -3.0f));
+	float diffuse = max(dot(inNorm, lightDir), 0.0f);
+	vec3 diffuseColor = vec3(0.98f, 0.56f, 0.38f) * diffuse;
 
 	float shadow = max(1.0 - shadowCalc(inLightPos), 0.4f);
 
-	outColor = vec4(outColor.rgb * diffuse * shadow, outColor.a);
-	//outColor = vec4(1.0 - shadow, 1.0 - shadow, 1.0 - shadow, outColor.a);
+	outColor = vec4(outColor.rgb * (ambient + diffuseColor) * shadow, outColor.a);
 }

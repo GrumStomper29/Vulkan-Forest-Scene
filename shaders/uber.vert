@@ -27,7 +27,8 @@ void main()
 	mat4 finalMatrix = cameraData.viewProj * pushConstants.transform;
 	gl_Position = finalMatrix * vec4(inPos, 1.0f);
 
-	outNorm = inNorm;
+	mat3 transform = inverse(transpose(mat3(pushConstants.transform)));
+	outNorm = normalize(inNorm * transform);
 	outColor = inColor;
 	outTex = inTex;
 

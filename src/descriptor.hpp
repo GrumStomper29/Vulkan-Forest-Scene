@@ -17,4 +17,6 @@ namespace Graphics
 
 	void writeTextureSamplers(VkDevice device, VkDescriptorSet descriptorSet, const std::vector<Texture>& textures);
 
+	void writeSkyboxSampler(VkDevice device, VkDescriptorSet descriptorSet, VkImageView skyboxView, VkSampler skyboxSampler);
+
 }

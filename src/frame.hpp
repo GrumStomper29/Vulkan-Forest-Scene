@@ -48,12 +48,18 @@ namespace Graphics
 		bool firstFrame{};
 		VkPipeline pipeline{};
 		VkPipeline shadowPipeline{};
+		VkPipeline skyboxPipeline{};
 		VkPipelineLayout pipelineLayout{};
 		VkPipelineLayout shadowPipelineLayout{};
 		const Buffer& vertexBuffer{};
 		const std::vector<RenderObject>& renderObjects{};
 		const std::vector<RenderObjectInstance>& renderObjectInstances{};
 		VkDescriptorSet descriptorSet{};
+		const glm::mat4& cameraView{};
+		const glm::mat4& cameraProj{};
+		const glm::mat4& lightView{};
+		const glm::mat4& lightProj{};
+		int skyboxRenderObjectIndex{};
 	};
 
 	class Frame

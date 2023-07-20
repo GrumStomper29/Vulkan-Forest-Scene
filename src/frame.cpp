@@ -12,6 +12,7 @@
 #include "glm/glm.hpp"
 
 #include <cstdint>
+#include <cstring>
 #include <utility>
 #include <vector>
 
@@ -146,6 +147,13 @@ namespace Graphics
 	{
 		std::uint32_t swapchainImageIndex{ acquireNextSwapchainImage(m_device, renderInfo.swapchain, m_presentSemaphore) };
 
+		CameraUBOData ubo
+		{
+			.viewProj{ renderInfo.cameraProj * renderInfo.cameraView },
+			.lightTransform{ renderInfo.lightProj * renderInfo.lightView },
+		};
+		std::memcpy(cameraUBOData, &ubo, sizeof(CameraUBOData));
+
 		vkResetCommandPool(m_device, m_cmdPool, 0);
 		beginCommandBuffer(m_cmdBuffer, true);
 
@@ -279,8 +287,6 @@ namespace Graphics
 
 		vkCmdBeginRendering(m_cmdBuffer, &renderingInfo);
 
-		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipeline);
-
 		VkDescriptorSet descriptorSets[2]
 		{
 			m_descriptorSet,
@@ -290,6 +296,17 @@ namespace Graphics
 
 		constexpr VkDeviceSize offset{ 0 };
 		vkCmdBindVertexBuffers(m_cmdBuffer, 0, 1, &renderInfo.vertexBuffer.buffer, &offset);
+
+		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.skyboxPipeline);
+
+		glm::mat4 view{ glm::mat3{ renderInfo.cameraView } };
+		PushConstants pushConstant{ { renderInfo.cameraProj * view }, 0 };
+		vkCmdPushConstants(m_cmdBuffer, renderInfo.pipelineLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(PushConstants), &pushConstant);
+
+		vkCmdBindIndexBuffer(m_cmdBuffer, renderInfo.renderObjects[renderInfo.skyboxRenderObjectIndex].meshes[0].indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(m_cmdBuffer, renderInfo.renderObjects[renderInfo.skyboxRenderObjectIndex].meshes[0].indexCount, 1, 0, 0, 0);
+
+		vkCmdBindPipeline(m_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderInfo.pipeline);
 
 		// Meshes with transparency should be drawn last
 		std::vector<QueuedMesh> meshQueue{};

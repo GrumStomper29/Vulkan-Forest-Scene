@@ -63,6 +63,9 @@
     <ClCompile Include="src\attachment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\instance.hpp">
@@ -101,6 +104,9 @@
     <ClInclude Include="src\attachment.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\texture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\uber.frag">
@@ -113,6 +119,12 @@
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\shadow.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\skybox.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\skybox.frag">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>

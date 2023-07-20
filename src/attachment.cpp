@@ -207,7 +207,7 @@ namespace Graphics
 		{
 			.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
 			.dstSet{ descriptorSet },
-			.dstBinding{ 0 },
+			.dstBinding{ 1 },
 			.dstArrayElement{ 1000 },
 			.descriptorCount{ 1 },
 			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },

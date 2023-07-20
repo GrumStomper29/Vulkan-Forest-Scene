@@ -13,6 +13,7 @@
 #include "descriptor.hpp"
 
 #include "mesh.hpp"
+#include "texture.hpp"
 
 #include "pipeline.hpp"
 
@@ -78,11 +79,16 @@ namespace Graphics
 		VkPipelineLayout uberPipelineLayout{};
 		VkPipeline       uberPipeline{};
 		VkPipeline       shadowpassPipeline{};
+		VkPipeline       skyboxPipeline{};
 
 		std::vector<RenderObject> renderObjects{};
 		Buffer                    vertexBuffer{};
 
 		std::vector<Texture> textures{};
+
+		Image       skybox{};
+		VkImageView skyboxView{};
+		VkSampler   skyboxSampler{};
 		
 		std::vector<RenderObjectInstance> renderObjectInstances{};
 	};
@@ -128,7 +134,7 @@ namespace Graphics
 		instance.depthAttachmentImage     = createDepthAttachmentImage(instance.allocator, instance.windowExtent, instance.sampleCount);
 		instance.depthAttachmentImageView = createDepthAttachmentImageView(instance.device, instance.depthAttachmentImage.image);
 
-		instance.shadowMapExtent  = { 1024, 1024 };
+		instance.shadowMapExtent  = { 2048, 2048 };
 		instance.shadowMap        = createDepthAttachmentImage(instance.allocator, instance.shadowMapExtent,
 		                                VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		instance.shadowMapView    = createDepthAttachmentImageView(instance.device, instance.shadowMap.image);
@@ -182,18 +188,34 @@ namespace Graphics
 			.pipelineLayout{ instance.uberPipelineLayout },
 		};
 		instance.shadowpassPipeline = createGraphicsPipeline(shadowpassPipelineCI);
+
+		GraphicsPipelineCreateInfo skyboxPipelineCI
+		{
+			.device{ instance.device },
+			.colorAttachmentCount{ 1 },
+			.pColorAttachmentFormats{ &instance.swapchainImageFormat },
+			.depthFormat{ VK_FORMAT_D32_SFLOAT },
+			.pVertexShaderPath{ "shaders/skybox.vert.spv" },
+			.pFragmentShaderPath{ "shaders/skybox.frag.spv" },
+			.viewportExtent{ instance.windowExtent },
+			.sampleCount{ instance.sampleCount },
+			.pipelineLayout{ instance.uberPipelineLayout },
+			.depthTestEnable{ false },
+		};
+		instance.skyboxPipeline = createGraphicsPipeline(skyboxPipelineCI);
 	}
 
 	void loadRenderObjects(Instance& instance)
 	{
 		std::vector<Vertex> vertices{};
 
-		instance.renderObjects.reserve(3);
-		instance.renderObjects.push_back({ "assets/field/field.obj", vertices,instance.device, instance.allocator, instance.graphicsQueue, instance.GPCmdBuffer, instance.GPFence });
-		instance.renderObjects.push_back({ "assets/tree/tree.obj", vertices, instance.device, instance.allocator, instance.graphicsQueue, instance.GPCmdBuffer, instance.GPFence });
-		instance.renderObjects.push_back({ "assets/Grass_Block.obj", vertices, instance.device, instance.allocator, instance.graphicsQueue, instance.GPCmdBuffer, instance.GPFence });
+		instance.renderObjects.reserve(4);
+		instance.renderObjects.push_back({ "assets/forest.obj", vertices,instance.device, instance.allocator, instance.graphicsQueue, instance.GPCmdBuffer, instance.GPFence });
+		instance.renderObjects.push_back({ "assets/skybox/obj.obj", vertices, instance.device, instance.allocator, instance.graphicsQueue, instance.GPCmdBuffer, instance.GPFence });
 
-		instance.renderObjects[1].meshes[1].opaque = false;
+		instance.renderObjects[0].meshes[1].opaque = false;
+		instance.renderObjects[0].meshes[2].opaque = false;
+		instance.renderObjects[0].meshes[4].opaque = false;
 
 		instance.vertexBuffer = createVertexBuffer(vertices, instance.device, instance.allocator, instance.graphicsQueue, instance.GPCmdBuffer, instance.GPFence);
 
@@ -217,98 +239,23 @@ namespace Graphics
 
 		writeTextureSamplers(instance.device, instance.globalDescriptorSet, instance.textures);
 
-		instance.renderObjectInstances.push_back({ .renderObject{ 0 } });
-		instance.renderObjectInstances[0].transform = glm::scale(instance.renderObjectInstances[0].transform, glm::vec3{ 1.0f });
-		instance.renderObjectInstances[0].transform = glm::translate(instance.renderObjectInstances[0].transform, glm::vec3{ 0.0f, 0.0f, 0.0f });
-
-		float treeHeights[7][7]{};
-
-		// Far right column
-		treeHeights[0][0] = 1.5f;
-		treeHeights[0][1] = 1.0f;
-		treeHeights[0][2] = 1.0f;
-		treeHeights[0][3] = 1.1f;
-		treeHeights[0][4] = 0.8f;
-		treeHeights[0][5] = 1.3f;
-		treeHeights[0][6] = 1.4f;
-
-		treeHeights[1][0] = 0.6f;
-		treeHeights[1][1] = -1.8f;
-		treeHeights[1][2] = -1.2f;
-		treeHeights[1][3] = -1.6f;
-		treeHeights[1][4] = -1.9f;
-		treeHeights[1][5] = 0.5f;
-		treeHeights[1][6] = 1.5f;
-
-		treeHeights[2][0] = 0.4f;
-		treeHeights[2][1] = -3.5f;
-		treeHeights[2][2] = -3.3f;
-		treeHeights[2][3] = -4.1f;
-		treeHeights[2][4] = -3.0f;
-		treeHeights[2][5] = 0.0f;
-		treeHeights[2][6] = 1.5f;
-
-		treeHeights[3][0] = 0.4f;
-		treeHeights[3][1] = -1.3f;
-		treeHeights[3][2] = -1.3f;
-		treeHeights[3][3] = -1.0f;
-		treeHeights[3][4] = -1.2f;
-		treeHeights[3][5] = -0.4f;
-		treeHeights[3][6] = 1.5f;
-
-		treeHeights[4][0] = 0.3f;
-		treeHeights[4][1] = -0.4f;
-		treeHeights[4][2] = 1.1f;
-		treeHeights[4][3] = 1.1f;
-		treeHeights[4][4] = 0.5f;
-		treeHeights[4][5] = 0.2f;
-		treeHeights[4][6] = 1.4f;
-
-		treeHeights[5][0] = 0.5f;
-		treeHeights[5][1] = 0.0f;
-		treeHeights[5][2] = 0.8f;
-		treeHeights[5][3] = 1.2f;
-		treeHeights[5][4] = 1.2f;
-		treeHeights[5][5] = 0.8f;
-		treeHeights[5][6] = 1.4f;
-
-		treeHeights[6][0] = 1.5f;
-		treeHeights[6][1] = 1.1f;
-		treeHeights[6][2] = 0.8f;
-		treeHeights[6][3] = 1.2f;
-		treeHeights[6][4] = 1.3f;
-		treeHeights[6][5] = 1.3f;
-		treeHeights[6][6] = 1.5f;
-
-		std::mt19937 rng{ std::random_device{}() };
-		std::uniform_int_distribution die360{ 1, 360 };
-		std::uniform_int_distribution die7080{ 10, 15 };
-
-		for (float n{ -3.0f }; n < 4.0f; ++n)
+		const char* paths[6]
 		{
-			for (float i{ -3.0f }; i < 4.0f; ++i)
-			{
-				instance.renderObjectInstances.push_back({ .renderObject{ 1 } });
+			"assets/skybox/px.png",
+			"assets/skybox/nx.png",
+			"assets/skybox/py.png",
+			"assets/skybox/ny.png",
+			"assets/skybox/pz.png",
+			"assets/skybox/nz.png",
+		};
+		instance.skybox = loadSkybox(paths, instance.device, instance.allocator, instance.graphicsQueue, instance.GPCmdBuffer, instance.GPFence);
+		instance.skyboxView = createSkyboxView(instance.device, instance.skybox.image);
+		instance.skyboxSampler = createSkyboxSampler(instance.device);
+		writeSkyboxSampler(instance.device, instance.globalDescriptorSet, instance.skyboxView, instance.skyboxSampler);
 
-				glm::mat4 transform{ 1.0f };
-				glm::vec3 scale
-				{
-					static_cast<float>(die7080(rng)) / 10.0f,
-					static_cast<float>(die7080(rng)) / 10.0f,
-					static_cast<float>(die7080(rng)) / 10.0f,
-				};
-				transform = glm::scale(transform, glm::vec3{ 7.0f, 7.0f, 7.0f });
-				transform = glm::translate(transform, glm::vec3{ i * 5.0f, treeHeights[static_cast<int>(i) + 3][static_cast<int>(n) + 3], n * 5.0f });
-				transform = glm::scale(transform, scale);
-
-				float rot{ static_cast<float>(die360(rng)) };
-
-				transform = glm::rotate(transform, glm::radians(rot), glm::vec3{ 0.0f, 1.0f, 0.0f });
-				instance.renderObjectInstances.back().transform = transform;
-
-				instance.renderObjectInstances.push_back({ .renderObject{ 2 } });
-			}
-		}
+		instance.renderObjectInstances.push_back({ .renderObject{ 0 } });
+		instance.renderObjectInstances[0].transform = glm::scale(instance.renderObjectInstances[0].transform, glm::vec3{ 100.0f });
+		instance.renderObjectInstances[0].transform = glm::translate(instance.renderObjectInstances[0].transform, glm::vec3{ 0.0f, 0.0f, 0.0f });
 	}
 
 	void run(Instance& instance)
@@ -346,16 +293,12 @@ namespace Graphics
 			if (glfwGetKey(instance.window, GLFW_KEY_LEFT) == GLFW_PRESS)  camera.rotate(0.0f, -camRotateSpeed);
 			if (glfwGetKey(instance.window, GLFW_KEY_RIGHT) == GLFW_PRESS) camera.rotate(0.0f, camRotateSpeed);
 
-			glm::mat4 lightView = glm::lookAt(glm::vec3(1.0f, -100.0f, 1.0f),
+			glm::mat4 lightView = glm::lookAt(glm::vec3(-400.0f, -200.0f, 600.0f),
 				glm::vec3(0.0f, 1.0f, 0.0f),
 				glm::vec3(0.0f, 1.0f, 0.0f));
-			glm::mat4 lightProj = glm::ortho(-250.0f, 250.0f, 250.0f, -250.0f, -1000.0f, 1000.0f);
+			glm::mat4 lightProj = glm::ortho(-1250.0f, 1250.0f, 1250.0f, -1250.0f, -1000.0f, 1000.0f);
 
 			CameraUBOData ubo{ .viewProj{ proj * camera.getViewMatrix() }, .lightTransform{ lightProj * lightView } };
-
-			instance.framesInFlight[frameNumber].waitFrame();
-
-			std::memcpy(instance.framesInFlight[frameNumber].cameraUBOData, &ubo, sizeof(CameraUBOData));
 
 			RenderInfo renderInfo
 			{
@@ -374,12 +317,20 @@ namespace Graphics
 				.firstFrame{ firstFrame },
 				.pipeline{ instance.uberPipeline },
 				.shadowPipeline{ instance.shadowpassPipeline },
+				.skyboxPipeline{ instance.skyboxPipeline },
 				.pipelineLayout{ instance.uberPipelineLayout },
 				.vertexBuffer{ instance.vertexBuffer },
 				.renderObjects{ instance.renderObjects },
 				.renderObjectInstances{ instance.renderObjectInstances },
 				.descriptorSet{ instance.globalDescriptorSet },
+				.cameraView{ camera.getViewMatrix() },
+				.cameraProj{ proj },
+				.lightView{ lightView },
+				.lightProj{ lightProj },
+				.skyboxRenderObjectIndex{ 1 },
 			};
+
+			instance.framesInFlight[frameNumber].waitFrame();
 
 			instance.framesInFlight[frameNumber].execute(renderInfo);
 
@@ -396,6 +347,7 @@ namespace Graphics
 	{
 		vkDeviceWaitIdle(instance.device);
 
+		vkDestroyPipeline(instance.device, instance.skyboxPipeline, nullptr);
 		vkDestroyPipeline(instance.device, instance.shadowpassPipeline, nullptr);
 		vkDestroyPipeline(instance.device, instance.uberPipeline, nullptr);
 		vkDestroyPipelineLayout(instance.device, instance.uberPipelineLayout, nullptr);
@@ -403,6 +355,11 @@ namespace Graphics
 		vmaDestroyBuffer(instance.allocator, instance.vertexBuffer.buffer, instance.vertexBuffer.alloc);
 
 		instance.renderObjectInstances.clear();
+
+		vkDestroySampler(instance.device, instance.skyboxSampler, nullptr);
+		vkDestroyImageView(instance.device, instance.skyboxView, nullptr);
+		vmaDestroyImage(instance.allocator, instance.skybox.image, instance.skybox.alloc);
+
 		instance.textures.clear();
 		instance.renderObjects.clear();
 

@@ -42,29 +42,59 @@ namespace Graphics
 
 	VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device)
 	{
-		VkDescriptorBindingFlags bindingFlag{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT };
-
-		VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags
-		{ 
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-			.bindingCount{ 1 },
-			.pBindingFlags{ &bindingFlag },
-		};
-
-		VkDescriptorSetLayoutBinding binding
+		/*
+		VkDescriptorSetLayoutBinding skyboxBinding
 		{
 			.binding{ 0 },
+			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+			.descriptorCount{ 1 },
+			.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
+		};
+		*/
+		VkDescriptorBindingFlags bindingFlags[2]
+		{
+			0,
+			VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT 
+		};
+
+		VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCI
+		{ 
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+			.bindingCount{ 2 },
+			.pBindingFlags{ bindingFlags },
+		};
+
+		VkDescriptorSetLayoutBinding bindings[2]
+		{
+			{
+				.binding{ 0 },
+				.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+				.descriptorCount{ 1 },
+				.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
+			},
+
+			{
+			.binding{ 1 },
+			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+			.descriptorCount{ 1001 },
+			.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
+			},
+		};
+		/*
+		VkDescriptorSetLayoutBinding binding
+		{
+			.binding{ 1 },
 			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
 			.descriptorCount{ 1001 },
 			.stageFlags{ VK_SHADER_STAGE_FRAGMENT_BIT },
 		};
-
+		*/
 		VkDescriptorSetLayoutCreateInfo layoutCI
 		{
 			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO },
-			.pNext{ &bindingFlags },
-			.bindingCount{ 1 },
-			.pBindings{ &binding },
+			.pNext{ &bindingFlagsCI },
+			.bindingCount{ 2 },
+			.pBindings{ bindings },
 		};
 
 		VkDescriptorSetLayout layout{};
@@ -105,7 +135,7 @@ namespace Graphics
 			{
 				.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
 				.dstSet{ descriptorSet },
-				.dstBinding{ 0 },
+				.dstBinding{ 1 },
 				.dstArrayElement{ static_cast<std::uint32_t>(i) },
 				.descriptorCount{ 1 },
 				.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
@@ -115,4 +145,24 @@ namespace Graphics
 		vkUpdateDescriptorSets(device, writes.size(), writes.data(), 0, nullptr);
 	}
 
+
+	void writeSkyboxSampler(VkDevice device, VkDescriptorSet descriptorSet, VkImageView skyboxView, VkSampler skyboxSampler)
+	{
+		VkDescriptorImageInfo imgInfo
+		{
+			.sampler{ skyboxSampler },
+			.imageView{ skyboxView },
+			.imageLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+		};
+		VkWriteDescriptorSet write
+		{
+			.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+			.dstSet{ descriptorSet },
+			.dstBinding{ 0 },
+			.descriptorCount{ 1 },
+			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+			.pImageInfo{ &imgInfo },
+		};
+		vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+	}
 }
